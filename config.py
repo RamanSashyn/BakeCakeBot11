@@ -1,1 +1,2 @@
 API_URL = "http://127.0.0.1:8080/api"
+ADMIN_GROUP_ID = "-4727378644"  
