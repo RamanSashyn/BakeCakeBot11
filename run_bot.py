@@ -1,9 +1,6 @@
 import asyncio
 from aiogram import Bot, Dispatcher
 from staticfiles.handlers import router
-import sys
-
-print(sys.modules.keys())  # Выведет список загруженных модулей
 
 TOKEN = "7996830180:AAG7WWT5MOKU8s40MfCxrAKMeYyulVh-BPM"
 
