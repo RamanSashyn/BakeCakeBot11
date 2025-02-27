@@ -7,8 +7,15 @@ from datetime import datetime, timedelta
 from bot.models import DeliveryState, CustomCakeState
 from aiogram import Bot, types
 from config import ADMIN_GROUP_ID
-from .keyboards import get_consent_keyboard, get_main_menu, get_order_menu, get_ready_cakes_menu, get_delivery_button, get_custom_cakes_menu
-from .noti import send_order_notification
+from .keyboards import (
+    get_consent_keyboard,
+    get_main_menu,
+    get_order_menu,
+    get_ready_cakes_menu,
+    get_custom_cakes_menu,
+)
+from .notifications import send_order_notification
+
 router = Router()
 
 
@@ -16,7 +23,9 @@ router = Router()
 async def get_group_id(message: types.Message):
     """Отправляет ID группы"""
     if message.chat.type in ["group", "supergroup"]:
-        await message.answer(f"ID этой группы: `{message.chat.id}`", parse_mode="Markdown")
+        await message.answer(
+            f"ID этой группы: `{message.chat.id}`", parse_mode="Markdown"
+        )
     else:
         await message.answer("Эта команда работает только в группах!")
 
@@ -29,38 +38,55 @@ async def send_admin_notification(bot: Bot, text: str):
 @router.message(Command("start"))
 async def send_welcome(message: types.Message):
     """Отправляет приветственное сообщение с кнопками согласия."""
-    user_name = message.from_user.username if message.from_user.username else message.from_user.first_name
-    text = f"Привет, {user_name} 🙋‍♀️! Для продолжения работы, пожалуйста, подтвердите согласие с обработкой персональных данных."
+    user_name = (
+        message.from_user.username
+        if message.from_user.username
+        else message.from_user.first_name
+    )
+    text = f"Привет, {user_name} 🙋‍♀️! BakeCake приветствует тебя. Для продолжения работы, пожалуйста, подтвердите согласие с обработкой персональных данных."
     consent_file = FSInputFile("files/soglasie.pdf")
     await message.answer(text, reply_markup=get_consent_keyboard())
     await message.answer_document(consent_file)
 
-@router.message(lambda message: message.text == "Согласен с обработкой персональных данных")
+
+@router.message(
+    lambda message: message.text == "✅Согласен с обработкой персональных данных"
+)
 async def agree_handler(message: types.Message):
     await message.answer(
-        "Вы дали согласие на обработку персональных данных. Можете продолжить работу.", 
-        reply_markup=types.ReplyKeyboardRemove()
+        "Вы дали согласие на обработку персональных данных. Можете продолжить работу",
+        reply_markup=types.ReplyKeyboardRemove(),
     )
     """Обрабатывает согласие и показывает главное меню."""
-    await message.answer("Пожалуйста, выберите, что Вас интересует", reply_markup=get_main_menu())
+    await message.answer(
+        "Пожалуйста, выберите, что Вас интересует", reply_markup=get_main_menu()
+    )
 
-@router.message(lambda message: message.text == "Не согласен с обработкой персональных данных")
+
+@router.message(
+    lambda message: message.text == "❌Не согласен с обработкой персональных данных"
+)
 async def disagree_handler(message: types.Message):
     """Обрабатывает отказ и завершает диалог."""
     await message.answer(
-        "Вы не согласились с обработкой персональных данных. К сожалению, мы не можем продолжить работу.", 
-        reply_markup=types.ReplyKeyboardRemove()
+        "Вы не согласились с обработкой персональных данных. К сожалению, мы не можем продолжить работу😔.",
+        reply_markup=types.ReplyKeyboardRemove(),
     )
+
 
 @router.callback_query(F.data == "order_cake")
 async def order_cake_callback(callback: CallbackQuery):
     """Обрабатывает нажатие на кнопку 'Хочу заказать торт' и предлагает выбрать тип заказа."""
-    await callback.message.answer("Какой торт хотите заказать?", reply_markup=get_order_menu())
+    await callback.message.answer(
+        "Какой торт хотите заказать?", reply_markup=get_order_menu()
+    )
+
 
 @router.callback_query(F.data == "view_prices")
 async def view_prices_callback(callback: CallbackQuery):
     """Обрабатывает нажатие на кнопку 'Просмотреть цены'."""
-    await callback.message.answer('''Вот наш прайс-лист :\n1. Торт "Шоколадное наслаждение"\nОписание: Богатый шоколадный торт с насыщенным вкусом какао, нежным кремом из бельгийского шоколада и легким ароматом ванили. Идеально подойдет для любителей шоколада.\n
+    await callback.message.answer(
+        """Вот наш прайс-лист :\n1. Торт "Шоколадное наслаждение"\nОписание: Богатый шоколадный торт с насыщенным вкусом какао, нежным кремом из бельгийского шоколада и легким ароматом ванили. Идеально подойдет для любителей шоколада.\n
 Цена: 1500 руб. (1,5 кг)\n
 Состав: шоколадный бисквит, ганаш из темного шоколада, сливочное масло, сахар, яйца, ваниль, какао, сливки.\n
 2. Торт "Клубничная мечта"\nОписание: Легкий и воздушный торт с нежным бисквитом, пропитанным клубничным сиропом, и слоем сливочного крема с натуральной клубникой.\n
@@ -75,7 +101,8 @@ async def view_prices_callback(callback: CallbackQuery):
 5. Торт "Ореховый шедевр"\nОписание: Насыщенный ореховый торт с карамельно-шоколадным кремом и хрустящими слоями из фундука и миндаля.\n
 Цена: 1900 руб. (2 кг)\n
 Состав: ореховый бисквит, карамель, шоколадный крем, фундук, миндаль, сливки, сахар, яйца, ваниль.
-6. Кастомный торт - +300руб. к стоимости оригинального торта''')
+6. Кастомный торт - +300руб. к стоимости оригинального торта"""
+    )
 
 
 @router.callback_query(F.data == "delivery_time")
@@ -88,62 +115,83 @@ async def delivery_time_callback(callback: CallbackQuery):
 @router.callback_query(F.data == "order_ready_cake")
 async def order_ready_cake_callback(callback: CallbackQuery):
     """Обрабатывает нажатие на кнопку 'Заказать готовый торт' и показывает список тортов."""
-    await callback.message.answer("Выберите один из наших готовых тортов:", reply_markup=get_ready_cakes_menu())
+    await callback.message.answer(
+        "Выберите один из наших готовых тортов:", reply_markup=get_ready_cakes_menu()
+    )
+
 
 @router.callback_query(F.data.startswith("cake_"))
-async def ready_cake_selected(callback: CallbackQuery, bot: Bot):
-    """Обрабатывает выбор конкретного торта."""
+async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
+    """Обрабатывает выбор готового торта и запрашивает адрес доставки."""
     cakes = {
         "cake_nut_masterpiece": "Торт 'Ореховый шедевр'",
         "cake_tropical_paradise": "Торт 'Тропический рай'",
         "cake_honey_homemade": "Торт 'Медовик по-домашнему'",
         "cake_strawberry_dream": "Торт 'Клубничная мечта'",
-        "cake_choco_delight": "Торт 'Шоколадное наслаждение'"
+        "cake_choco_delight": "Торт 'Шоколадное наслаждение'",
     }
-    
+
     selected_cake = cakes.get(callback.data, "Неизвестный торт")
+    await state.update_data(selected_cake=selected_cake)
+
     await callback.message.answer(
-        f"✅ Вы заказали торт *{selected_cake}*.\n\n"
-        "Теперь оформите доставку.",
-        reply_markup=get_delivery_button(),
-        parse_mode="Markdown"
+        f"✅ Вы выбрали торт *{selected_cake}*.\n\n" "📍 Теперь введите адрес доставки:",
+        parse_mode="Markdown",
     )
 
-    # Отправляем уведомление в группу
-    await send_order_notification(bot, callback.from_user, selected_cake)
-
+    await state.set_state(DeliveryState.waiting_for_address)
     await callback.answer()
+
 
 @router.callback_query(F.data == "start_delivery")
 async def start_delivery(callback: CallbackQuery, state: FSMContext):
     """Начинаем процесс оформления доставки."""
-    await callback.message.answer("Пожалуйста, введите адрес доставки:")
+    await callback.message.answer("📍Пожалуйста, введите адрес доставки:")
     await state.set_state(DeliveryState.waiting_for_address)
+
 
 @router.message(DeliveryState.waiting_for_address)
 async def process_address(message: types.Message, state: FSMContext):
     """Сохраняем адрес и запрашиваем комментарий."""
     await state.update_data(address=message.text)
-    await message.answer("Спасибо! Теперь введите ваши пожелания (если есть). Если пожеланий нет, просто напишите 'нет'.")
+    await message.answer(
+        "Спасибо! Теперь введите ваши пожелания (если есть). Если пожеланий нет, просто напишите 'нет'."
+    )
     await state.set_state(DeliveryState.waiting_for_comment)
 
+
 @router.message(DeliveryState.waiting_for_comment)
-async def process_comment(message: types.Message, state: FSMContext):
-    """Сохраняем комментарий и завершаем процесс заказа."""
+async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
+    """Сохраняем комментарий, завершаем процесс заказа и уведомляет администраторов."""
     user_data = await state.get_data()
     address = user_data.get("address")
     comment = message.text
+    selected_cake = user_data.get("selected_cake", "Кастомный торт")
+    cake_text = user_data.get("cake_text", None)  
 
-    await message.answer(f"✅ Ваш заказ оформлен!\n\n📍 Адрес доставки: {address}\n💬 Пожелания: {comment}\n\nСпасибо, что выбрали нас! 🎂")
+    base_cake = user_data.get("base_cake")
+    if selected_cake and "Кастомный торт" in selected_cake and base_cake:
+        selected_cake = f"Заказ: {base_cake} (кастомный)"
+
+    await message.answer(
+        f"✅ Ваш заказ оформлен!\n\n📍 Адрес доставки: {address}\n💬 Пожелания: {comment}\n\nСпасибо, что выбрали нас! 🎂"
+    )
+
+    await send_order_notification(
+        bot, message.from_user, selected_cake, address, comment, cake_text
+    )
+
     await state.clear()
+
 
 @router.callback_query(F.data == "order_custom_cake")
 async def order_custom_cake_callback(callback: CallbackQuery):
     """Выбор торта для кастомизации."""
-    await callback.message.edit_text(
-        "Вы выбрали кастомный торт! Пожалуйста, выберите, какой торт хотите кастомизировать:", 
-        reply_markup=get_custom_cakes_menu()
+    await callback.message.answer(
+        "Вы выбрали кастомный торт! Пожалуйста, выберите, какой торт хотите кастомизировать:",
+        reply_markup=get_custom_cakes_menu(),
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("custom_cake_"))
@@ -154,38 +202,45 @@ async def custom_cake_selected(callback: CallbackQuery, state: FSMContext):
         "custom_cake_tropical_paradise": "Торт 'Тропический рай'",
         "custom_cake_honey_homemade": "Торт 'Медовик по-домашнему'",
         "custom_cake_strawberry_dream": "Торт 'Клубничная мечта'",
-        "custom_cake_choco_delight": "Торт 'Шоколадное наслаждение'"
+        "custom_cake_choco_delight": "Торт 'Шоколадное наслаждение'",
     }
-    
-    selected_cake = cakes.get(callback.data, "Неизвестный торт")
-    await state.update_data(selected_cake=selected_cake)
-    
+
+    base_cake = cakes.get(callback.data, "Неизвестный торт")
+    await state.update_data(selected_cake="Кастомный торт", base_cake=base_cake)
+
     await callback.message.answer(
-        f"Вы выбрали: {selected_cake} 🎂\n\nВведите надпись, которую хотели бы добавить на торт:"
+        f"Вы выбрали: {base_cake} 🎂\n\nВведите надпись, которую хотели бы добавить на торт:"
     )
-    
+
     await state.set_state(CustomCakeState.waiting_for_text)
 
 
 @router.message(CustomCakeState.waiting_for_text)
 async def receive_cake_text(message: types.Message, state: FSMContext, bot: Bot):
-    """Сохраняем надпись, подтверждаем заказ и уведомляем администраторов."""
+    """Сохраняем надпись, подтверждаем заказ и запрашиваем адрес доставки."""
     user_data = await state.get_data()
     selected_cake = user_data.get("selected_cake")
     cake_text = message.text
 
-    # Подтверждение заказа пользователю
+    await state.update_data(cake_text=cake_text)
+
     await message.answer(
-        f"✅ Вы заказали кастомный {selected_cake}!\n🖋 Надпись: \"{cake_text}\".\n\n"
-        "Теперь оформите доставку.",
-        reply_markup=get_delivery_button()
+        f'✅ Вы заказали кастомный {selected_cake}!\n🖋 Надпись: "{cake_text}".\n\n'
+        "📍Теперь укажите адрес доставки:",
+        reply_markup=types.ReplyKeyboardRemove(),
     )
 
-    # Отправляем уведомление в группу
-    await send_order_notification(bot, message.from_user, selected_cake, cake_text)
-
-    await state.clear()
+    await state.set_state(DeliveryState.waiting_for_address)
 
 
+@router.message(DeliveryState.waiting_for_address)
+async def receive_address(message: types.Message, state: FSMContext):
+    """Сохраняем адрес и запрашиваем комментарий."""
+    address = message.text
+    await state.update_data(address=address)
 
+    await message.answer(
+        "Спасибо! Теперь введите ваши пожелания (если есть). Если пожеланий нет, просто напишите 'нет'."
+    )
 
+    await state.set_state(DeliveryState.waiting_for_comment)

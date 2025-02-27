@@ -8,3 +8,4 @@ class DeliveryState(StatesGroup):
 
 class CustomCakeState(StatesGroup):
     waiting_for_text = State()
+    waiting_for_address = State()
