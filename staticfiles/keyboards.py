@@ -38,6 +38,11 @@ def get_main_menu():
                     text="📬Узнать сроки доставки", callback_data="delivery_time"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="📊Реклама", callback_data="advertisement"
+                )
+            ],
         ]
     )
 
