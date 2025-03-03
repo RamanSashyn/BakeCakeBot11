@@ -66,33 +66,34 @@ def get_ready_cakes_menu():
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='🥜Торт "Ореховый шедевр"', callback_data="cake_nut_masterpiece"
-                )
+                    text='🍫 Шоколадная классика - 2930.00 руб.',
+                    callback_data='cake_chocolate_classic'
+                ),
+                InlineKeyboardButton(
+                    text='🍮 Карамельный соблазн - 2180.00 руб.',
+                    callback_data='cake_caramel_seduction'
+                ),
             ],
             [
                 InlineKeyboardButton(
-                    text='🏝Торт "Тропический рай"',
-                    callback_data="cake_tropical_paradise",
-                )
+                    text='🍓 Ягодный рай - 3330.00 руб.',
+                    callback_data='cake_berry_paradise'
+                ),
+                InlineKeyboardButton(
+                    text='🍰 Нежность - 2600.00 руб.',
+                    callback_data='cake_tenderness'
+                ),
             ],
             [
                 InlineKeyboardButton(
-                    text='🍯Торт "Медовик по-домашнему"',
-                    callback_data="cake_honey_homemade",
-                )
-            ],
-            [
+                    text='🍁 Кленовый уют - 2580.00 руб.',
+                    callback_data='cake_maple_comfort'
+                ),
                 InlineKeyboardButton(
-                    text='🍓Торт "Клубничная мечта"',
-                    callback_data="cake_strawberry_dream",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text='🍫Торт "Шоколадное наслаждение"',
-                    callback_data="cake_choco_delight",
-                )
-            ],
+                    text='🍓 Минимализм - 2400.00 руб.',
+                    callback_data='cake_minimalism'
+                ),
+            ]
         ]
     )
 
