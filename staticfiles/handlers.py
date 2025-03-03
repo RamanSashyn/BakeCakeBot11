@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-from bot.models import DeliveryState, CustomCakeState, StandardCake, Cake
+from bot.models import DeliveryState, CustomCakeState, StandardCake, CustomCake
 from asgiref.sync import sync_to_async
 import logging
 from aiogram import Bot, types
@@ -14,7 +14,11 @@ from .keyboards import (
     get_main_menu,
     get_order_menu,
     get_ready_cakes_menu,
-    get_custom_cakes_menu,
+    get_level_keyboard,
+    get_shape_keyboard,
+    get_topping_keyboard,
+    get_berries_keyboard,
+    get_decor_keyboard,
 )
 from .notifications import send_order_notification
 
@@ -189,49 +193,127 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
 
 @router.callback_query(F.data == "order_custom_cake")
 async def order_custom_cake_callback(callback: CallbackQuery):
-    """Выбор торта для кастомизации."""
+    """Запуск кастомизации торта и выбор уровня"""
     await callback.message.answer(
-        "Вы выбрали кастомный торт! Пожалуйста, выберите, какой торт хотите кастомизировать:",
-        reply_markup=get_custom_cakes_menu(),
+        "Выберите уровень торта:",
+        reply_markup=get_level_keyboard()
     )
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("custom_cake_"))
-async def custom_cake_selected(callback: CallbackQuery, state: FSMContext):
-    """Обрабатываем выбор торта для кастомизации и запрашиваем надпись."""
-    cakes = {
-        "custom_cake_nut_masterpiece": "Торт 'Ореховый шедевр'",
-        "custom_cake_tropical_paradise": "Торт 'Тропический рай'",
-        "custom_cake_honey_homemade": "Торт 'Медовик по-домашнему'",
-        "custom_cake_strawberry_dream": "Торт 'Клубничная мечта'",
-        "custom_cake_choco_delight": "Торт 'Шоколадное наслаждение'",
-    }
+@router.callback_query(F.data.startswith("level_"))
+async def level_selected(callback: CallbackQuery, state: FSMContext):
+    """Обрабатываем выбор уровня торта"""
+    level = callback.data.split("_")[1]
 
-    base_cake = cakes.get(callback.data, "Неизвестный торт")
-    await state.update_data(selected_cake="Кастомный торт", base_cake=base_cake)
+    await state.update_data(level=level)
+
+    await state.set_state(CustomCakeState.waiting_for_shape)
 
     await callback.message.answer(
-        f"Вы выбрали: {base_cake} 🎂\n\nВведите надпись, которую хотели бы добавить на торт:"
+        f"Вы выбрали: {level} уровень. 🎂\nТеперь выберите форму торта.",
+        reply_markup=get_shape_keyboard()
     )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("shape_"))
+async def shape_selected(callback: CallbackQuery, state: FSMContext):
+    """Обрабатываем выбор формы торта"""
+    shape = callback.data.split("_")[1]
+
+    await state.update_data(shape=shape)
+
+    await state.set_state(CustomCakeState.waiting_for_topping)
+
+    await callback.message.answer(
+        f"Вы выбрали форму: {shape}. 🎂\nТеперь выберите топинг для торта.",
+        reply_markup=get_topping_keyboard()
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("topping_"))
+async def topping_selected(callback: CallbackQuery, state: FSMContext):
+    """Обрабатываем выбор начинки"""
+    topping = callback.data.split("_")[1]
+
+    await state.update_data(topping=topping)
+
+    await state.set_state(CustomCakeState.waiting_for_berries)
+
+    await callback.message.answer(
+        f"Вы выбрали топинг: {topping}. 🍫\nТеперь выберите ягоды для торта.",
+        reply_markup=get_berries_keyboard()
+    )
+    await callback.answer()
+
+
+
+@router.callback_query(F.data.startswith("berry_"))
+async def berry_selected(callback: CallbackQuery, state: FSMContext):
+    """Обрабатываем выбор ягод"""
+    berry = callback.data.split("_")[1]
+
+    await state.update_data(berry=berry)
+
+    await state.set_state(CustomCakeState.waiting_for_decor)
+
+    await callback.message.answer(
+        f"Вы выбрали ягоду: {berry}. 🍓\nТеперь выберите декор для торта.",
+        reply_markup=get_decor_keyboard()
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("decor_"))
+async def decor_selected(callback: CallbackQuery, state: FSMContext):
+    """Обрабатываем выбор декора"""
+    decor = callback.data.split("_")[1]
+
+    await state.update_data(decor=decor)
 
     await state.set_state(CustomCakeState.waiting_for_text)
 
+    await callback.message.answer(
+        f"Вы выбрали декор: {decor}. 🎉\n\n"
+        "Теперь напишите текст, который хотите на торт (или напишите 'нет', если без надписи)."
+    )
+    await callback.answer()
+
 
 @router.message(CustomCakeState.waiting_for_text)
-async def receive_cake_text(message: types.Message, state: FSMContext, bot: Bot):
-    """Сохраняем надпись, подтверждаем заказ и запрашиваем адрес доставки."""
-    user_data = await state.get_data()
-    selected_cake = user_data.get("selected_cake")
-    cake_text = message.text
+async def receive_cake_text(message: types.Message, state: FSMContext):
+    """Формируем итоговый заказ после ввода текста."""
+    cake_text = message.text.strip().lower()
+
+    if cake_text == "нет":
+        cake_text = None  # Если "нет", убираем надпись
 
     await state.update_data(cake_text=cake_text)
+    user_data = await state.get_data()
 
-    await message.answer(
-        f'✅ Вы заказали кастомный {selected_cake}!\n🖋 Надпись: "{cake_text}".\n\n'
-        "📍Теперь укажите адрес доставки:",
-        reply_markup=types.ReplyKeyboardRemove(),
+    # Получаем все выбранные параметры
+    level = user_data.get("level", "Не указан")
+    shape = user_data.get("shape", "Не указана")
+    topping = user_data.get("topping", "Не указан")
+    berry = user_data.get("berry", "Не указаны")
+    decor = user_data.get("decor", "Без декора") if cake_text else "Без декора"
+    cake_text = cake_text or "Без надписи"
+
+    # Формируем сообщение с итоговым заказом
+    result_message = (
+        "🎂 *Ваш заказ готов!*\n\n"
+        f"📏 Уровень: {level}\n"
+        f"🔵 Форма: {shape}\n"
+        f"🍫 Топинг: {topping}\n"
+        f"🍓 Ягоды: {berry}\n"
+        f"✨ Декор: {decor}\n"
+        f"🖋 Надпись: {cake_text}\n\n"
+        "📍 Теперь укажите адрес доставки:"
     )
+
+    await message.answer(result_message, parse_mode="Markdown")
 
     await state.set_state(DeliveryState.waiting_for_address)
 

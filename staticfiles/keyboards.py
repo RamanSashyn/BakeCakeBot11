@@ -98,39 +98,91 @@ def get_ready_cakes_menu():
     )
 
 
-def get_custom_cakes_menu():
-    """Меню выбора торта для кастомизации."""
-    return InlineKeyboardMarkup(
+def get_level_keyboard():
+    keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(
-                    text='🥜Торт "Ореховый шедевр"',
-                    callback_data="custom_cake_nut_masterpiece",
-                )
+                InlineKeyboardButton(text="Level 1", callback_data="level_1"),
+                InlineKeyboardButton(text="Level 2", callback_data="level_2"),
             ],
             [
-                InlineKeyboardButton(
-                    text='🏝Торт "Тропический рай"',
-                    callback_data="custom_cake_tropical_paradise",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text='🍯Торт "Медовик по-домашнему"',
-                    callback_data="custom_cake_honey_homemade",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text='🍓Торт "Клубничная мечта"',
-                    callback_data="custom_cake_strawberry_dream",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text='🍫Торт "Шоколадное наслаждение"',
-                    callback_data="custom_cake_choco_delight",
-                )
-            ],
+                InlineKeyboardButton(text="Level 3", callback_data="level_3")
+            ]
         ]
     )
+    return keyboard
+
+
+def get_shape_keyboard():
+    """Создаем клавиатуру для выбора формы торта"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Круглая", callback_data="shape_circle"),
+            InlineKeyboardButton(text="Квадратная", callback_data="shape_square"),
+        ],
+        [
+            InlineKeyboardButton(text="Прямоугольная", callback_data="shape_rectangle")
+        ]
+    ])
+    return keyboard
+
+
+def get_topping_keyboard():
+    """Создаем клавиатуру для выбора топпинга торта"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Без топпинга", callback_data="topping_none"),
+            InlineKeyboardButton(text="Белый соус", callback_data="topping_white_sauce"),
+        ],
+        [
+            InlineKeyboardButton(text="Карамельный сироп", callback_data="topping_caramel_syrup"),
+            InlineKeyboardButton(text="Кленовый сироп", callback_data="topping_maple_syrup"),
+        ],
+        [
+            InlineKeyboardButton(text="Клубничный сироп", callback_data="topping_strawberry_syrup"),
+            InlineKeyboardButton(text="Черничный сироп", callback_data="topping_blueberry_syrup"),
+        ],
+        [
+            InlineKeyboardButton(text="Молочный шоколад", callback_data="topping_milk_chocolate"),
+        ]
+    ])
+    return keyboard
+
+
+def get_berries_keyboard():
+    """Создаем клавиатуру для выбора ягод"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Малина", callback_data="berry_raspberry"),
+            InlineKeyboardButton(text="Голубика", callback_data="berry_blueberry"),
+        ],
+        [
+            InlineKeyboardButton(text="Клубника", callback_data="berry_strawberry"),
+            InlineKeyboardButton(text="Ежевика", callback_data="berry_blackberry"),
+        ]
+    ])
+    return keyboard
+
+def get_decor_keyboard():
+    """Создаем клавиатуру для выбора декора"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Фисташки", callback_data="decor_pistachios"),
+            InlineKeyboardButton(text="Безе", callback_data="decor_meringue"),
+        ],
+        [
+            InlineKeyboardButton(text="Фундук", callback_data="decor_hazelnut"),
+            InlineKeyboardButton(text="Пекан", callback_data="decor_pecan"),
+        ],
+        [
+            InlineKeyboardButton(text="Маршмеллоу", callback_data="decor_marshmallow"),
+            InlineKeyboardButton(text="Марципан", callback_data="decor_marzipan"),
+        ]
+    ])
+    return keyboard
+
+
+
+
+
+
