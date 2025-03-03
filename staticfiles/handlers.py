@@ -4,7 +4,9 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-from bot.models import DeliveryState, CustomCakeState
+from bot.models import DeliveryState, CustomCakeState, StandardCake, Cake
+from asgiref.sync import sync_to_async
+import logging
 from aiogram import Bot, types
 from config import ADMIN_GROUP_ID
 from .keyboards import (
@@ -17,6 +19,7 @@ from .keyboards import (
 from .notifications import send_order_notification
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.message(Command("get_group_id"))
@@ -82,27 +85,26 @@ async def order_cake_callback(callback: CallbackQuery):
     )
 
 
+@sync_to_async
+def get_all_cakes():
+    try:
+        return list(
+            StandardCake.objects.all())
+    except Exception as e:
+        print(f"Error: {e}")
+        return []
+
 @router.callback_query(F.data == "view_prices")
 async def view_prices_callback(callback: CallbackQuery):
     """Обрабатывает нажатие на кнопку 'Просмотреть цены'."""
-    await callback.message.answer(
-        """Вот наш прайс-лист :\n1. Торт "Шоколадное наслаждение"\nОписание: Богатый шоколадный торт с насыщенным вкусом какао, нежным кремом из бельгийского шоколада и легким ароматом ванили. Идеально подойдет для любителей шоколада.\n
-Цена: 1500 руб. (1,5 кг)\n
-Состав: шоколадный бисквит, ганаш из темного шоколада, сливочное масло, сахар, яйца, ваниль, какао, сливки.\n
-2. Торт "Клубничная мечта"\nОписание: Легкий и воздушный торт с нежным бисквитом, пропитанным клубничным сиропом, и слоем сливочного крема с натуральной клубникой.\n
-Цена: 1700 руб. (1,8 кг)\n
-Состав: ванильный бисквит, клубничное пюре, сливочный крем, сахар, яйца, сливки, желатин, ваниль.\n
-3. Торт "Медовик по-домашнему"\n Описание: Классический медовый торт с мягкими медовыми коржами и нежным сметанным кремом. Прекрасное сочетание вкусов для любителей традиционной выпечки.\n
-Цена: 1400 руб. (1,5 кг)\n
-Состав: мука, мед, сахар, яйца, сливочное масло, сметана, сода, ваниль, грецкие орехи (по желанию).\n
-4. Торт "Тропический рай"\n Описание: Экзотический торт с ананасом, кокосом и манго, пропитанный легким цитрусовым сиропом. Освежающий и нежный десерт для жарких дней.\n
-Цена: 1800 руб. (1,7 кг)\n
-Состав: кокосовый бисквит, ананасовое пюре, манговый мусс, сливки, сахар, яйца, желатин, лаймовый сироп\n
-5. Торт "Ореховый шедевр"\nОписание: Насыщенный ореховый торт с карамельно-шоколадным кремом и хрустящими слоями из фундука и миндаля.\n
-Цена: 1900 руб. (2 кг)\n
-Состав: ореховый бисквит, карамель, шоколадный крем, фундук, миндаль, сливки, сахар, яйца, ваниль.
-6. Кастомный торт - +300руб. к стоимости оригинального торта"""
-    )
+    cakes = await get_all_cakes()
+    price_list= "Вот наш прайс-лист:\n"
+
+    for index, cake in enumerate(cakes, start=1):
+        price_list += f"{index}. {cake.name}\n" \
+                      f"Описание: {cake.description}\n" \
+                      f"Цена: {cake.price} руб.\n\n"
+    await callback.message.answer(price_list)
 
 
 @router.callback_query(F.data == "delivery_time")
