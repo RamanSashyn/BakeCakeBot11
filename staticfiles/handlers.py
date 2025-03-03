@@ -298,8 +298,9 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     shape = user_data.get("shape", "Не указана")
     topping = user_data.get("topping", "Не указан")
     berry = user_data.get("berry", "Не указаны")
-    decor = user_data.get("decor", "Без декора") if cake_text else "Без декора"
-    cake_text = cake_text or "Без надписи"
+    decor = user_data.get("decor", "Без декора")  
+
+    cake_text = cake_text or "Без надписи"  
 
     # Формируем сообщение с итоговым заказом
     result_message = (
@@ -316,6 +317,7 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     await message.answer(result_message, parse_mode="Markdown")
 
     await state.set_state(DeliveryState.waiting_for_address)
+
 
 
 @router.message(DeliveryState.waiting_for_address)
