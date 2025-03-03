@@ -56,9 +56,11 @@ class Cake(models.Model):
 
 class StandardCake(Cake):
     """Модель для стандартных тортов"""
+    name = models.CharField(max_length=100, unique=True, verbose_name="Название торта", default="")
+    description = models.TextField(verbose_name="Описание торта", blank=True, null=True)
 
     def __str__(self):
-        return f"Стандартный торт {self.level} уровня(ей), {self.shape} - цена {self.price}"
+        return f"{self.name} уровня(ей) {self.level}, форма {self.shape} - цена {self.price}"
 
 
 class CustomCake(Cake):

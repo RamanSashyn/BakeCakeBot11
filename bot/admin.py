@@ -10,6 +10,10 @@ class CakeAdmin(admin.ModelAdmin):
     filter_horizontal = ('berries', 'decor')  # Позволяет легко добавлять несколько ягод и декора
 
 
+class StandardCakeAdmin(CakeAdmin):
+    list_display = ('name', 'level', 'shape', 'topping', 'price')
+
+
 class ShortLinkAdmin(admin.ModelAdmin):
     list_display = ('original_url', 'short_url', 'created_at', 'clicks_count')
     search_fields = ('original_url', 'short_url')
@@ -34,5 +38,5 @@ admin.site.register(Decor)
 admin.site.register(Berry)
 admin.site.register(Shape)
 admin.site.register(CustomCake, CakeAdmin)
-admin.site.register(StandardCake, CakeAdmin)
+admin.site.register(StandardCake, StandardCakeAdmin)
 admin.site.register(OrderStatistics)
