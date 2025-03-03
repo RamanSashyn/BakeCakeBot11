@@ -126,11 +126,12 @@ async def order_ready_cake_callback(callback: CallbackQuery):
 async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатывает выбор готового торта и запрашивает адрес доставки."""
     cakes = {
-        "cake_nut_masterpiece": "Торт 'Ореховый шедевр'",
-        "cake_tropical_paradise": "Торт 'Тропический рай'",
-        "cake_honey_homemade": "Торт 'Медовик по-домашнему'",
-        "cake_strawberry_dream": "Торт 'Клубничная мечта'",
-        "cake_choco_delight": "Торт 'Шоколадное наслаждение'",
+        "cake_chocolate_classic": "Торт 'Шоколадная классика' - 2930.00 руб.",
+        "cake_caramel_seduction": "Торт 'Карамельный соблазн' - 2180.00 руб.",
+        "cake_berry_paradise": "Торт 'Ягодный рай' - 3330.00 руб.",
+        "cake_tenderness": "Торт 'Нежность' - 2600.00 руб.",
+        "cake_maple_comfort": "Торт 'Кленовый уют' - 2580.00 руб.",
+        "cake_minimalism": "Торт 'Минимализм' - 2400.00 руб.",
     }
 
     selected_cake = cakes.get(callback.data, "Неизвестный торт")
