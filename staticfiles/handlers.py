@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-from bot.models import DeliveryState, CustomCakeState, StandardCake, CustomCake
+from bot.models import DeliveryState, CustomCakeState, StandardCake, Level, Shape, Topping, Decor, Berry
 from asgiref.sync import sync_to_async
 import logging
 from aiogram import Bot, types
@@ -288,17 +288,23 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     cake_text = message.text.strip().lower()
 
     if cake_text == "нет":
-        cake_text = None  # Если "нет", убираем надпись
+        cake_text = None  
 
     await state.update_data(cake_text=cake_text)
     user_data = await state.get_data()
 
-    # Получаем все выбранные параметры
     level = user_data.get("level", "Не указан")
     shape = user_data.get("shape", "Не указана")
     topping = user_data.get("topping", "Не указан")
     berry = user_data.get("berry", "Не указаны")
     decor = user_data.get("decor", "Без декора")  
+
+    # Заменяем английские значения на русские
+    level = dict((item[0], item[1]) for item in Level.CHOICES).get(level, "Не указан")
+    shape = dict((item[0], item[1]) for item in Shape.CHOICES).get(shape, "Не указана")
+    topping = dict((item[0], item[1]) for item in Topping.CHOICES).get(topping, "Не указан")
+    berry = dict((item[0], item[1]) for item in Berry.CHOICES).get(berry, "Не указаны")
+    decor = dict((item[0], item[1]) for item in Decor.CHOICES).get(decor, "Без декора")
 
     cake_text = cake_text or "Без надписи"  
 
@@ -307,7 +313,7 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
         "🎂 *Ваш заказ готов!*\n\n"
         f"📏 Уровень: {level}\n"
         f"🔵 Форма: {shape}\n"
-        f"🍫 Топинг: {topping}\n"
+        f"🍫 Топпинг: {topping}\n"
         f"🍓 Ягоды: {berry}\n"
         f"✨ Декор: {decor}\n"
         f"🖋 Надпись: {cake_text}\n\n"
@@ -317,6 +323,7 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     await message.answer(result_message, parse_mode="Markdown")
 
     await state.set_state(DeliveryState.waiting_for_address)
+
 
 
 
