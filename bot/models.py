@@ -239,8 +239,14 @@ class DeliveryState(StatesGroup):
 
 
 class CustomCakeState(StatesGroup):
+    waiting_for_level = State()
+    waiting_for_shape = State()
+    waiting_for_topping = State()
+    waiting_for_berries = State()
+    waiting_for_decor = State()
     waiting_for_text = State()
     waiting_for_address = State()
+    waiting_for_message = State()
 
 
 class ShortLink(models.Model):
