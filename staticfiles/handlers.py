@@ -26,6 +26,38 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
+SHAPE_DICT = {
+    'square': 'Квадрат',
+    'circle': 'Круг',
+    'rectangle': 'Прямоугольник'
+}
+
+TOPPING_DICT = {
+    'none': 'Без топпинга',
+    'white_sauce': 'Белый соус',
+    'caramel_syrup': 'Карамельный сироп',
+    'maple_syrup': 'Кленовый сироп',
+    'strawberry_syrup': 'Клубничный сироп',
+    'blueberry_syrup': 'Черничный сироп',
+    'milk_chocolate': 'Молочный шоколад'
+}
+
+BERRY_DICT = {
+    'blackberry': 'Ежевика',
+    'raspberry': 'Малина',
+    'blueberry': 'Голубика',
+    'strawberry': 'Клубника'
+}
+
+DECOR_DICT = {
+    'pistachios': 'Фисташки',
+    'meringue': 'Безе',
+    'hazelnut': 'Фундук',
+    'pecan': 'Пекан',
+    'marshmallow': 'Маршмеллоу',
+    'marzipan': 'Марципан'
+}
+
 @router.message(Command("get_group_id"))
 async def get_group_id(message: types.Message):
     """Отправляет ID группы"""
@@ -221,29 +253,32 @@ async def level_selected(callback: CallbackQuery, state: FSMContext):
 async def shape_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор формы торта"""
     shape = callback.data.split("_")[1]
+    shape_name = SHAPE_DICT.get(shape, shape)  # Получаем русское название
 
     await state.update_data(shape=shape)
 
     await state.set_state(CustomCakeState.waiting_for_topping)
 
     await callback.message.answer(
-        f"Вы выбрали форму: {shape}. 🎂\nТеперь выберите топинг для торта.",
+        f"Вы выбрали форму: {shape_name}. 🎂\nТеперь выберите топинг для торта.",
         reply_markup=get_topping_keyboard()
     )
     await callback.answer()
 
 
+
 @router.callback_query(F.data.startswith("topping_"))
 async def topping_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор начинки"""
-    topping = callback.data.split("_")[1]
+    topping = callback.data.split("_", 1)[1] 
+    topping_name = TOPPING_DICT.get(topping, topping)  # Получаем русское название
 
     await state.update_data(topping=topping)
 
     await state.set_state(CustomCakeState.waiting_for_berries)
 
     await callback.message.answer(
-        f"Вы выбрали топинг: {topping}. 🍫\nТеперь выберите ягоды для торта.",
+        f"Вы выбрали топинг: {topping_name}. 🍫\nТеперь выберите ягоды для торта.",
         reply_markup=get_berries_keyboard()
     )
     await callback.answer()
@@ -254,13 +289,14 @@ async def topping_selected(callback: CallbackQuery, state: FSMContext):
 async def berry_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор ягод"""
     berry = callback.data.split("_")[1]
+    berry_name = BERRY_DICT.get(berry, berry)  # Получаем русское название
 
     await state.update_data(berry=berry)
 
     await state.set_state(CustomCakeState.waiting_for_decor)
 
     await callback.message.answer(
-        f"Вы выбрали ягоду: {berry}. 🍓\nТеперь выберите декор для торта.",
+        f"Вы выбрали ягоду: {berry_name}. 🍓\nТеперь выберите декор для торта.",
         reply_markup=get_decor_keyboard()
     )
     await callback.answer()
@@ -270,13 +306,14 @@ async def berry_selected(callback: CallbackQuery, state: FSMContext):
 async def decor_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор декора"""
     decor = callback.data.split("_")[1]
+    decor_name = DECOR_DICT.get(decor, decor)  # Получаем русское название
 
     await state.update_data(decor=decor)
 
     await state.set_state(CustomCakeState.waiting_for_text)
 
     await callback.message.answer(
-        f"Вы выбрали декор: {decor}. 🎉\n\n"
+        f"Вы выбрали декор: {decor_name}. 🎉\n\n"
         "Теперь напишите текст, который хотите на торт (или напишите 'нет', если без надписи)."
     )
     await callback.answer()

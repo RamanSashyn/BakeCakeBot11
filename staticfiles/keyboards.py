@@ -102,11 +102,11 @@ def get_level_keyboard():
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Level 1", callback_data="level_1"),
-                InlineKeyboardButton(text="Level 2", callback_data="level_2"),
+                InlineKeyboardButton(text="1 уровень", callback_data="level_1"),
+                InlineKeyboardButton(text="2 уровня", callback_data="level_2"),
             ],
             [
-                InlineKeyboardButton(text="Level 3", callback_data="level_3")
+                InlineKeyboardButton(text="3 уровня", callback_data="level_3")
             ]
         ]
     )
@@ -117,11 +117,11 @@ def get_shape_keyboard():
     """Создаем клавиатуру для выбора формы торта"""
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Круглая", callback_data="shape_circle"),
-            InlineKeyboardButton(text="Квадратная", callback_data="shape_square"),
+            InlineKeyboardButton(text="Круглый", callback_data="shape_circle"),
+            InlineKeyboardButton(text="Квадратный", callback_data="shape_square"),
         ],
         [
-            InlineKeyboardButton(text="Прямоугольная", callback_data="shape_rectangle")
+            InlineKeyboardButton(text="Прямоугольный", callback_data="shape_rectangle")
         ]
     ])
     return keyboard
