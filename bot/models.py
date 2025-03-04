@@ -236,6 +236,7 @@ class OrderStatistics(models.Model):
 class DeliveryState(StatesGroup):
     waiting_for_address = State()
     waiting_for_comment = State()
+    waiting_for_text = State()
 
 
 class CustomCakeState(StatesGroup):

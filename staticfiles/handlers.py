@@ -160,7 +160,7 @@ async def order_ready_cake_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("cake_"))
 async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает выбор готового торта и запрашивает адрес доставки."""
+    """Обрабатывает выбор готового торта и запрашивает текст надписи."""
     cakes = {
         "cake_chocolate_classic": "Торт 'Шоколадная классика' - 2930.00 руб.",
         "cake_caramel_seduction": "Торт 'Карамельный соблазн' - 2180.00 руб.",
@@ -174,11 +174,15 @@ async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
     await state.update_data(selected_cake=selected_cake)
 
     await callback.message.answer(
-        f"✅ Вы выбрали торт *{selected_cake}*.\n\n" "📍 Теперь введите адрес доставки:",
+        f"✅ Вы выбрали торт *{selected_cake}*.",
         parse_mode="Markdown",
     )
-
-    await state.set_state(DeliveryState.waiting_for_address)
+    
+    await callback.message.answer(
+        "Теперь напишите текст, который хотите на торт (или напишите 'нет', если без надписи)."
+    )
+    
+    await state.set_state(CustomCakeState.waiting_for_text)
     await callback.answer()
 
 
@@ -330,32 +334,38 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     await state.update_data(cake_text=cake_text)
     user_data = await state.get_data()
 
-    level = user_data.get("level", "Не указан")
-    shape = user_data.get("shape", "Не указана")
-    topping = user_data.get("topping", "Не указан")
-    berry = user_data.get("berry", "Не указаны")
-    decor = user_data.get("decor", "Без декора")  
+    selected_cake = user_data.get("selected_cake", "Кастомный торт")
+    if "Кастомный торт" in selected_cake:
+        level = user_data.get("level", "Не указан")
+        shape = user_data.get("shape", "Не указана")
+        topping = user_data.get("topping", "Не указан")
+        berry = user_data.get("berry", "Не указаны")
+        decor = user_data.get("decor", "Без декора")  
 
-    # Заменяем английские значения на русские
-    level = dict((item[0], item[1]) for item in Level.CHOICES).get(level, "Не указан")
-    shape = dict((item[0], item[1]) for item in Shape.CHOICES).get(shape, "Не указана")
-    topping = dict((item[0], item[1]) for item in Topping.CHOICES).get(topping, "Не указан")
-    berry = dict((item[0], item[1]) for item in Berry.CHOICES).get(berry, "Не указаны")
-    decor = dict((item[0], item[1]) for item in Decor.CHOICES).get(decor, "Без декора")
+        level = dict((item[0], item[1]) for item in Level.CHOICES).get(level, "Не указан")
+        shape = dict((item[0], item[1]) for item in Shape.CHOICES).get(shape, "Не указана")
+        topping = dict((item[0], item[1]) for item in Topping.CHOICES).get(topping, "Не указан")
+        berry = dict((item[0], item[1]) for item in Berry.CHOICES).get(berry, "Не указаны")
+        decor = dict((item[0], item[1]) for item in Decor.CHOICES).get(decor, "Без декора")
 
-    cake_text = cake_text or "Без надписи"  
+        cake_text = cake_text or "Без надписи"  
 
-    # Формируем сообщение с итоговым заказом
-    result_message = (
-        "🎂 *Ваш заказ готов!*\n\n"
-        f"📏 Уровень: {level}\n"
-        f"🔵 Форма: {shape}\n"
-        f"🍫 Топпинг: {topping}\n"
-        f"🍓 Ягоды: {berry}\n"
-        f"✨ Декор: {decor}\n"
-        f"🖋 Надпись: {cake_text}\n\n"
-        "📍 Теперь укажите адрес доставки:"
-    )
+        result_message = (
+            "🎂 *Ваш заказ готов!*\n\n"
+            f"📏 Уровень: {level}\n"
+            f"🔵 Форма: {shape}\n"
+            f"🍫 Топпинг: {topping}\n"
+            f"🍓 Ягоды: {berry}\n"
+            f"✨ Декор: {decor}\n"
+            f"🖋 Надпись: {cake_text}\n\n"
+            "📍 Теперь укажите адрес доставки:"
+        )
+    else:
+        result_message = (
+            f"✅ Вы выбрали торт *{selected_cake}*.\n\n"
+            f"🖋 Надпись: {cake_text or 'Без надписи'}\n\n"
+            "📍 Теперь укажите адрес доставки:"
+        )
 
     await message.answer(result_message, parse_mode="Markdown")
 
