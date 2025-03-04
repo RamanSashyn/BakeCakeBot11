@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-from bot.models import DeliveryState, CustomCakeState, StandardCake, CustomCake
+from bot.models import DeliveryState, CustomCakeState, StandardCake, Level, Shape, Topping, Decor, Berry
 from asgiref.sync import sync_to_async
 import logging
 from aiogram import Bot, types
@@ -25,6 +25,38 @@ from .notifications import send_order_notification
 router = Router()
 logger = logging.getLogger(__name__)
 
+
+SHAPE_DICT = {
+    'square': 'Квадрат',
+    'circle': 'Круг',
+    'rectangle': 'Прямоугольник'
+}
+
+TOPPING_DICT = {
+    'none': 'Без топпинга',
+    'white_sauce': 'Белый соус',
+    'caramel_syrup': 'Карамельный сироп',
+    'maple_syrup': 'Кленовый сироп',
+    'strawberry_syrup': 'Клубничный сироп',
+    'blueberry_syrup': 'Черничный сироп',
+    'milk_chocolate': 'Молочный шоколад'
+}
+
+BERRY_DICT = {
+    'blackberry': 'Ежевика',
+    'raspberry': 'Малина',
+    'blueberry': 'Голубика',
+    'strawberry': 'Клубника'
+}
+
+DECOR_DICT = {
+    'pistachios': 'Фисташки',
+    'meringue': 'Безе',
+    'hazelnut': 'Фундук',
+    'pecan': 'Пекан',
+    'marshmallow': 'Маршмеллоу',
+    'marzipan': 'Марципан'
+}
 
 @router.message(Command("get_group_id"))
 async def get_group_id(message: types.Message):
@@ -128,7 +160,7 @@ async def order_ready_cake_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("cake_"))
 async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
-    """Обрабатывает выбор готового торта и запрашивает адрес доставки."""
+    """Обрабатывает выбор готового торта и запрашивает текст надписи."""
     cakes = {
         "cake_chocolate_classic": "Торт 'Шоколадная классика' - 2930.00 руб.",
         "cake_caramel_seduction": "Торт 'Карамельный соблазн' - 2180.00 руб.",
@@ -142,11 +174,15 @@ async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
     await state.update_data(selected_cake=selected_cake)
 
     await callback.message.answer(
-        f"✅ Вы выбрали торт *{selected_cake}*.\n\n" "📍 Теперь введите адрес доставки:",
+        f"✅ Вы выбрали торт *{selected_cake}*.",
         parse_mode="Markdown",
     )
-
-    await state.set_state(DeliveryState.waiting_for_address)
+    
+    await callback.message.answer(
+        "Теперь напишите текст, который хотите на торт (или напишите 'нет', если без надписи)."
+    )
+    
+    await state.set_state(CustomCakeState.waiting_for_text)
     await callback.answer()
 
 
@@ -221,29 +257,32 @@ async def level_selected(callback: CallbackQuery, state: FSMContext):
 async def shape_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор формы торта"""
     shape = callback.data.split("_")[1]
+    shape_name = SHAPE_DICT.get(shape, shape)  # Получаем русское название
 
     await state.update_data(shape=shape)
 
     await state.set_state(CustomCakeState.waiting_for_topping)
 
     await callback.message.answer(
-        f"Вы выбрали форму: {shape}. 🎂\nТеперь выберите топинг для торта.",
+        f"Вы выбрали форму: {shape_name}. 🎂\nТеперь выберите топинг для торта.",
         reply_markup=get_topping_keyboard()
     )
     await callback.answer()
 
 
+
 @router.callback_query(F.data.startswith("topping_"))
 async def topping_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор начинки"""
-    topping = callback.data.split("_")[1]
+    topping = callback.data.split("_", 1)[1] 
+    topping_name = TOPPING_DICT.get(topping, topping)  # Получаем русское название
 
     await state.update_data(topping=topping)
 
     await state.set_state(CustomCakeState.waiting_for_berries)
 
     await callback.message.answer(
-        f"Вы выбрали топинг: {topping}. 🍫\nТеперь выберите ягоды для торта.",
+        f"Вы выбрали топинг: {topping_name}. 🍫\nТеперь выберите ягоды для торта.",
         reply_markup=get_berries_keyboard()
     )
     await callback.answer()
@@ -254,13 +293,14 @@ async def topping_selected(callback: CallbackQuery, state: FSMContext):
 async def berry_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор ягод"""
     berry = callback.data.split("_")[1]
+    berry_name = BERRY_DICT.get(berry, berry)  # Получаем русское название
 
     await state.update_data(berry=berry)
 
     await state.set_state(CustomCakeState.waiting_for_decor)
 
     await callback.message.answer(
-        f"Вы выбрали ягоду: {berry}. 🍓\nТеперь выберите декор для торта.",
+        f"Вы выбрали ягоду: {berry_name}. 🍓\nТеперь выберите декор для торта.",
         reply_markup=get_decor_keyboard()
     )
     await callback.answer()
@@ -270,13 +310,14 @@ async def berry_selected(callback: CallbackQuery, state: FSMContext):
 async def decor_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор декора"""
     decor = callback.data.split("_")[1]
+    decor_name = DECOR_DICT.get(decor, decor)  # Получаем русское название
 
     await state.update_data(decor=decor)
 
     await state.set_state(CustomCakeState.waiting_for_text)
 
     await callback.message.answer(
-        f"Вы выбрали декор: {decor}. 🎉\n\n"
+        f"Вы выбрали декор: {decor_name}. 🎉\n\n"
         "Теперь напишите текст, который хотите на торт (или напишите 'нет', если без надписи)."
     )
     await callback.answer()
@@ -288,34 +329,49 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     cake_text = message.text.strip().lower()
 
     if cake_text == "нет":
-        cake_text = None  # Если "нет", убираем надпись
+        cake_text = None  
 
     await state.update_data(cake_text=cake_text)
     user_data = await state.get_data()
 
-    # Получаем все выбранные параметры
-    level = user_data.get("level", "Не указан")
-    shape = user_data.get("shape", "Не указана")
-    topping = user_data.get("topping", "Не указан")
-    berry = user_data.get("berry", "Не указаны")
-    decor = user_data.get("decor", "Без декора") if cake_text else "Без декора"
-    cake_text = cake_text or "Без надписи"
+    selected_cake = user_data.get("selected_cake", "Кастомный торт")
+    if "Кастомный торт" in selected_cake:
+        level = user_data.get("level", "Не указан")
+        shape = user_data.get("shape", "Не указана")
+        topping = user_data.get("topping", "Не указан")
+        berry = user_data.get("berry", "Не указаны")
+        decor = user_data.get("decor", "Без декора")  
 
-    # Формируем сообщение с итоговым заказом
-    result_message = (
-        "🎂 *Ваш заказ готов!*\n\n"
-        f"📏 Уровень: {level}\n"
-        f"🔵 Форма: {shape}\n"
-        f"🍫 Топинг: {topping}\n"
-        f"🍓 Ягоды: {berry}\n"
-        f"✨ Декор: {decor}\n"
-        f"🖋 Надпись: {cake_text}\n\n"
-        "📍 Теперь укажите адрес доставки:"
-    )
+        level = dict((item[0], item[1]) for item in Level.CHOICES).get(level, "Не указан")
+        shape = dict((item[0], item[1]) for item in Shape.CHOICES).get(shape, "Не указана")
+        topping = dict((item[0], item[1]) for item in Topping.CHOICES).get(topping, "Не указан")
+        berry = dict((item[0], item[1]) for item in Berry.CHOICES).get(berry, "Не указаны")
+        decor = dict((item[0], item[1]) for item in Decor.CHOICES).get(decor, "Без декора")
+
+        cake_text = cake_text or "Без надписи"  
+
+        result_message = (
+            "🎂 *Ваш заказ готов!*\n\n"
+            f"📏 Уровень: {level}\n"
+            f"🔵 Форма: {shape}\n"
+            f"🍫 Топпинг: {topping}\n"
+            f"🍓 Ягоды: {berry}\n"
+            f"✨ Декор: {decor}\n"
+            f"🖋 Надпись: {cake_text}\n\n"
+            "📍 Теперь укажите адрес доставки:"
+        )
+    else:
+        result_message = (
+            f"✅ Вы выбрали торт *{selected_cake}*.\n\n"
+            f"🖋 Надпись: {cake_text or 'Без надписи'}\n\n"
+            "📍 Теперь укажите адрес доставки:"
+        )
 
     await message.answer(result_message, parse_mode="Markdown")
 
     await state.set_state(DeliveryState.waiting_for_address)
+
+
 
 
 @router.message(DeliveryState.waiting_for_address)
