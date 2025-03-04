@@ -4,6 +4,9 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
+from django.db.models import QuerySet
+from bot.models import StandardCake
+from asgiref.sync import sync_to_async
 
 
 def get_consent_keyboard():
@@ -60,42 +63,33 @@ def get_order_menu():
     )
 
 
-def get_ready_cakes_menu():
+@sync_to_async
+def get_cakes_from_db():
+    try:
+        return list(
+            StandardCake.objects.all())
+    except Exception as e:
+        print(f"Error: {e}")
+        return []
+
+
+async def get_ready_cakes_menu():
     """Меню с выбором готовых тортов."""
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text='🍫 Шоколадная классика - 2930.00 руб.',
-                    callback_data='cake_chocolate_classic'
-                ),
-                InlineKeyboardButton(
-                    text='🍮 Карамельный соблазн - 2180.00 руб.',
-                    callback_data='cake_caramel_seduction'
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text='🍓 Ягодный рай - 3330.00 руб.',
-                    callback_data='cake_berry_paradise'
-                ),
-                InlineKeyboardButton(
-                    text='🍰 Нежность - 2600.00 руб.',
-                    callback_data='cake_tenderness'
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text='🍁 Кленовый уют - 2580.00 руб.',
-                    callback_data='cake_maple_comfort'
-                ),
-                InlineKeyboardButton(
-                    text='🍓 Минимализм - 2400.00 руб.',
-                    callback_data='cake_minimalism'
-                ),
-            ]
-        ]
-    )
+    cakes = await get_cakes_from_db()
+
+    # Создаем клавиатуру
+    inline_buttons = []
+
+    for cake in cakes:
+        button_text = f"🍰 {cake.name} - {cake.price} руб."
+        callback_data = f"cake_{cake.id}"  # Используем ID торта в качестве callback_data
+        inline_buttons.append(InlineKeyboardButton(text=button_text, callback_data=callback_data))
+
+    # Разбиваем кнопки на строки (например, по 2 кнопки в строке)
+    row_width = 2
+    rows = [inline_buttons[i:i + row_width] for i in range(0, len(inline_buttons), row_width)]
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def get_level_keyboard():
