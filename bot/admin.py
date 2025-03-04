@@ -1,17 +1,17 @@
 from django.contrib import admin
 from .models import ShortLink
 from .vk_utils import count_clicks
-from .models import User, Order, Topping, Level, Decor, Berry, Shape, StandardCake, CustomCake, OrderStatistics
+from .models import StandardCake, CakeOrder
 
 
-class CakeAdmin(admin.ModelAdmin):
-    list_display = ('level', 'shape', 'topping', 'price')  # Отображаем нужные поля
-    search_fields = ('level__name', 'shape__name', 'topping__name')  # Возможность поиска по полям
-    filter_horizontal = ('berries', 'decor')  # Позволяет легко добавлять несколько ягод и декора
+class StandardCakeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'description')  # Как отображать информацию о торте в админке
+    search_fields = ('name',)  # Возможность поиска по названию торта
 
-
-class StandardCakeAdmin(CakeAdmin):
-    list_display = ('name', 'level', 'shape', 'topping', 'price')
+@admin.register(CakeOrder)
+class CakeOrderAdmin(admin.ModelAdmin):
+    list_display = ('cake', 'cake_text', 'address', 'price', 'created_at')  # Как отображать информацию о заказах
+    search_fields = ('cake__name', 'address')
 
 
 class ShortLinkAdmin(admin.ModelAdmin):
@@ -30,13 +30,5 @@ class ShortLinkAdmin(admin.ModelAdmin):
         return queryset
 
 admin.site.register(ShortLink, ShortLinkAdmin)
-admin.site.register(User)
-admin.site.register(Order)
-admin.site.register(Topping)
-admin.site.register(Level)
-admin.site.register(Decor)
-admin.site.register(Berry)
-admin.site.register(Shape)
-admin.site.register(CustomCake, CakeAdmin)
 admin.site.register(StandardCake, StandardCakeAdmin)
-admin.site.register(OrderStatistics)
+
