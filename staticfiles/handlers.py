@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-from bot.models import DeliveryState, CustomCakeState, StandardCake
+from bot.models import DeliveryState, CustomCakeState, StandardCake, CakeOrder
 from asgiref.sync import sync_to_async
 import logging
 from aiogram import Bot, types
@@ -153,36 +153,46 @@ async def delivery_time_callback(callback: CallbackQuery):
 @router.callback_query(F.data == "order_ready_cake")
 async def order_ready_cake_callback(callback: CallbackQuery):
     """Обрабатывает нажатие на кнопку 'Заказать готовый торт' и показывает список тортов."""
+
+    reply_markup = await get_ready_cakes_menu()
+
     await callback.message.answer(
-        "Выберите один из наших готовых тортов:", reply_markup=get_ready_cakes_menu()
+        "Выберите один из наших готовых тортов:", reply_markup=reply_markup
     )
+
+
+@sync_to_async
+def get_cake_by_id(cake_id):
+    try:
+        return StandardCake.objects.get(id=cake_id)
+    except StandardCake.DoesNotExist:
+        return None
 
 
 @router.callback_query(F.data.startswith("cake_"))
 async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатывает выбор готового торта и запрашивает текст надписи."""
-    cakes = {
-        "cake_chocolate_classic": "Торт 'Шоколадная классика' - 2930.00 руб.",
-        "cake_caramel_seduction": "Торт 'Карамельный соблазн' - 2180.00 руб.",
-        "cake_berry_paradise": "Торт 'Ягодный рай' - 3330.00 руб.",
-        "cake_tenderness": "Торт 'Нежность' - 2600.00 руб.",
-        "cake_maple_comfort": "Торт 'Кленовый уют' - 2580.00 руб.",
-        "cake_minimalism": "Торт 'Минимализм' - 2400.00 руб.",
-    }
 
-    selected_cake = cakes.get(callback.data, "Неизвестный торт")
-    await state.update_data(selected_cake=selected_cake)
+    cake_id = callback.data.split("_")[1]  # Получаем ID торта из callback_data
+    selected_cake = await get_cake_by_id(cake_id)  # Получаем торт из базы асинхронно
 
-    await callback.message.answer(
-        f"✅ Вы выбрали торт *{selected_cake}*.",
-        parse_mode="Markdown",
-    )
-    
-    await callback.message.answer(
-        "Теперь напишите текст, который хотите на торт (или напишите 'нет', если без надписи)."
-    )
-    
-    await state.set_state(CustomCakeState.waiting_for_text)
+    if selected_cake:
+        await state.update_data(selected_cake=f"Торт '{selected_cake.name}' - {selected_cake.price} руб.")
+        await callback.message.answer(
+            f"✅ Вы выбрали торт *{selected_cake.name}*.",
+            parse_mode="Markdown",
+        )
+
+        await callback.message.answer(
+            "Теперь напишите текст, который хотите на торт (или напишите 'нет', если без надписи)."
+        )
+
+        await state.update_data(selected_cake_id=cake_id)
+
+        await state.set_state(CustomCakeState.waiting_for_text)
+    else:
+        await callback.message.answer("❌ Не удалось найти выбранный торт.")
+
     await callback.answer()
 
 
@@ -203,25 +213,47 @@ async def process_address(message: types.Message, state: FSMContext):
     await state.set_state(DeliveryState.waiting_for_comment)
 
 
+@sync_to_async
+def save_order(cake_order):
+    cake_order.save()
+
+
 @router.message(DeliveryState.waiting_for_comment)
 async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
     """Сохраняем комментарий, завершаем процесс заказа и уведомляет администраторов."""
     user_data = await state.get_data()
     address = user_data.get("address")
     comment = message.text
-    selected_cake = user_data.get("selected_cake", "Кастомный торт")
-    cake_text = user_data.get("cake_text", None)  
+    selected_cake_id = user_data.get("selected_cake_id")
+    cake_text = user_data.get("cake_text", None)
 
-    base_cake = user_data.get("base_cake")
-    if selected_cake and "Кастомный торт" in selected_cake and base_cake:
-        selected_cake = f"Заказ: {base_cake} (кастомный)"
+    selected_cake = await get_cake_by_id(selected_cake_id)
+
+    if not selected_cake:
+        await message.answer("Ошибка! Торт не был выбран.")
+        return
+
+    cake_order = CakeOrder(
+        cake=selected_cake,
+        cake_text=cake_text,
+        address=address,
+        comment=comment,
+        price=selected_cake.price,  # Для проверки пока без дополнительной надписи
+        telegram_id=message.from_user.username,  # Сохраняем ID Telegram
+    )
+    await save_order(cake_order)
 
     await message.answer(
-        f"✅ Ваш заказ оформлен!\n\n📍 Адрес доставки: {address}\n💬 Пожелания: {comment}\n\nСпасибо, что выбрали нас! 🎂"
+        f"✅ Ваш заказ оформлен!\n\n"
+        f"Вы выбрали: {selected_cake.name} - {selected_cake.price} руб.\n"
+        f"Дополнительно: {'Текст на торте: ' + cake_text if cake_text else 'Без надписи'}\n"
+        f"📍 Адрес доставки: {address}\n"
+        f"💬 Пожелания: {comment}\n\n"
+        f"Спасибо, что выбрали нас! 🎂"
     )
 
     await send_order_notification(
-        bot, message.from_user, selected_cake, address, comment, cake_text
+        bot, message.from_user, selected_cake.name, address, comment, cake_text
     )
 
     await state.clear()
