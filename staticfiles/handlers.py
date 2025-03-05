@@ -286,6 +286,7 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
     await state.clear()
 
 
+
 @router.callback_query(F.data.startswith("shape_"))
 async def shape_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор формы торта"""
@@ -366,26 +367,52 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     # Получаем сохранённые данные
     data = await state.get_data()
 
-    # Проверяем, есть ли там уровень
-    level = data.get("level")
+    # Проверяем, если это кастомный торт, то уровень нужен
+    selected_cake = data.get("selected_cake", "Кастомный торт")
 
-    if level is None:
-        await message.answer("Ошибка: уровень торта не был выбран. Попробуйте заново.")
-        return
+    # Если кастомный торт, проверяем уровень
+    if "Кастомный торт" in selected_cake:
+        level = data.get("level")
 
-    # Получаем название уровня
-    level_name = dict(CustomCake.LEVEL_CHOICES).get(level, f"{level} уровень")
+        if level is None:
+            await message.answer("Ошибка: уровень торта не был выбран. Попробуйте заново.")
+            return
+
+        level_name = dict(CustomCake.LEVEL_CHOICES).get(level, f"{level} уровень")
+
+    else:
+        # Если выбран стандартный торт, уровня не существует
+        level_name = None
+
+    # Получаем текст, который пользователь хочет на торте
     cake_text = message.text.strip().lower()
 
+    # Если пользователь написал "нет", то надпись будет пустой
     if cake_text == "нет":
         cake_text = None
 
     await state.update_data(cake_text=cake_text)
     user_data = await state.get_data()
 
-    selected_cake = user_data.get("selected_cake", "Кастомный торт")
+    # Для стандартного торта
+    if "Кастомный торт" not in selected_cake:
+        selected_cake_id = user_data.get("selected_cake_id")
+        selected_cake_obj = await get_cake_by_id(selected_cake_id)
 
-    if "Кастомный торт" in selected_cake:
+        if selected_cake_obj:
+            total_price = selected_cake_obj.price
+            result_message = (
+                f"✅ Вы выбрали торт *{selected_cake_obj.name}*.\n\n"
+                f"🖋 Надпись: {cake_text or 'Без надписи'}\n"
+                f"💵 Общая цена: {total_price} руб.\n\n"
+                "📍 Теперь укажите адрес доставки:"
+            )
+        else:
+            await message.answer("Ошибка: выбранный торт не найден.")
+            return
+
+    # Для кастомного торта
+    else:
         levels = user_data.get("levels", 1)  # По умолчанию 1 уровень
         shape = user_data.get("shape", "round")  # По умолчанию круглый
         topping = user_data.get("topping", "none")
@@ -416,18 +443,10 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
             f"💵 Общая цена: {total_price} руб.\n\n"
             "📍 Теперь укажите адрес доставки:"
         )
-    else:
-        # Для обычных тортов вызываем метод класса, если он есть (добавь его в модель)
-        total_price = CustomCake.calculate_price(selected_cake, cake_text)
-        result_message = (
-            f"✅ Вы выбрали торт *{selected_cake}*.\n\n"
-            f"🖋 Надпись: {cake_text or 'Без надписи'}\n"
-            f"💵 Общая цена: {total_price} руб.\n\n"
-            "📍 Теперь укажите адрес доставки:"
-        )
 
     await message.answer(result_message, parse_mode="Markdown")
     await state.set_state(DeliveryState.waiting_for_address)
+
 
 
 @router.message(DeliveryState.waiting_for_address)
