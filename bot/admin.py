@@ -1,9 +1,14 @@
 from django.contrib import admin
 from .models import ShortLink
 from .vk_utils import count_clicks
-from .models import StandardCake, CakeOrder
+from .models import StandardCake, CakeOrder, CustomCake
 
 
+@admin.register(CustomCake)
+class CustomCakeAdmin(admin.ModelAdmin):
+    list_display = ('shape', 'levels', 'topping', 'berries', 'decor', 'cake_text', 'price')
+    search_fields = ('shape', 'topping', 'berries', 'decor')
+    
 class StandardCakeAdmin(admin.ModelAdmin):
     list_display = ('name', 'price', 'description')  # Как отображать информацию о торте в админке
     search_fields = ('name',)  # Возможность поиска по названию торта

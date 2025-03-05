@@ -5,7 +5,7 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from django.db.models import QuerySet
-from bot.models import StandardCake
+from bot.models import StandardCake, CustomCake
 from asgiref.sync import sync_to_async
 
 
@@ -91,88 +91,89 @@ async def get_ready_cakes_menu():
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+@sync_to_async
+def get_all_custom_cakes():
+    """Получает список всех кастомных тортов из базы данных."""
+    try:
+        return list(CustomCake.objects.all())
+    except Exception as e:
+        print(f"Ошибка при получении кастомных тортов: {e}")
+        return []
 
 def get_level_keyboard():
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="1 уровень", callback_data="level_1"),
-                InlineKeyboardButton(text="2 уровня", callback_data="level_2"),
-            ],
-            [
-                InlineKeyboardButton(text="3 уровня", callback_data="level_3")
-            ]
-        ]
-    )
+    # Получаем все доступные уровни из LEVEL_CHOICES
+    level_choices = dict(CustomCake.LEVEL_CHOICES)
+
+    buttons = [
+        [InlineKeyboardButton(text=level_text, callback_data=f"level_{level_value}")]
+        for level_value, level_text in level_choices.items()
+    ]
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)  
+
     return keyboard
 
 
 def get_shape_keyboard():
     """Создаем клавиатуру для выбора формы торта"""
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Круглый", callback_data="shape_circle"),
-            InlineKeyboardButton(text="Квадратный", callback_data="shape_square"),
-        ],
-        [
-            InlineKeyboardButton(text="Прямоугольный", callback_data="shape_rectangle")
-        ]
-    ])
+    # Предположим, что ваш CustomCake имеет поле SHAPE_CHOICES, где хранятся формы
+    shape_choices = dict(CustomCake.SHAPE_CHOICES)
+
+    # Создаем кнопки
+    buttons = [
+        [InlineKeyboardButton(text=shape_text, callback_data=f"shape_{shape_value}")]
+        for shape_value, shape_text in shape_choices.items()
+    ]
+
+    # Инициализируем InlineKeyboardMarkup с кнопками
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
 
 
 def get_topping_keyboard():
     """Создаем клавиатуру для выбора топпинга торта"""
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Без топпинга", callback_data="topping_none"),
-            InlineKeyboardButton(text="Белый соус", callback_data="topping_white_sauce"),
-        ],
-        [
-            InlineKeyboardButton(text="Карамельный сироп", callback_data="topping_caramel_syrup"),
-            InlineKeyboardButton(text="Кленовый сироп", callback_data="topping_maple_syrup"),
-        ],
-        [
-            InlineKeyboardButton(text="Клубничный сироп", callback_data="topping_strawberry_syrup"),
-            InlineKeyboardButton(text="Черничный сироп", callback_data="topping_blueberry_syrup"),
-        ],
-        [
-            InlineKeyboardButton(text="Молочный шоколад", callback_data="topping_milk_chocolate"),
-        ]
-    ])
+    # Предположим, что ваш CustomCake имеет поле TOPPING_CHOICES, где хранятся топпинги
+    topping_choices = dict(CustomCake.TOPPING_CHOICES)
+
+    # Создаем кнопки
+    buttons = [
+        [InlineKeyboardButton(text=topping_text, callback_data=f"topping_{topping_value}")]
+        for topping_value, topping_text in topping_choices.items()
+    ]
+
+    # Инициализируем InlineKeyboardMarkup с кнопками
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
 
 
 def get_berries_keyboard():
     """Создаем клавиатуру для выбора ягод"""
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Малина", callback_data="berry_raspberry"),
-            InlineKeyboardButton(text="Голубика", callback_data="berry_blueberry"),
-        ],
-        [
-            InlineKeyboardButton(text="Клубника", callback_data="berry_strawberry"),
-            InlineKeyboardButton(text="Ежевика", callback_data="berry_blackberry"),
-        ]
-    ])
+    # Предположим, что ваш CustomCake имеет поле BERRY_CHOICES, где хранятся ягоды
+    berry_choices = dict(CustomCake.BERRY_CHOICES)
+
+    # Создаем кнопки
+    buttons = [
+        [InlineKeyboardButton(text=berry_text, callback_data=f"berry_{berry_value}")]
+        for berry_value, berry_text in berry_choices.items()
+    ]
+
+    # Инициализируем InlineKeyboardMarkup с кнопками
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
 
 def get_decor_keyboard():
     """Создаем клавиатуру для выбора декора"""
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Фисташки", callback_data="decor_pistachios"),
-            InlineKeyboardButton(text="Безе", callback_data="decor_meringue"),
-        ],
-        [
-            InlineKeyboardButton(text="Фундук", callback_data="decor_hazelnut"),
-            InlineKeyboardButton(text="Пекан", callback_data="decor_pecan"),
-        ],
-        [
-            InlineKeyboardButton(text="Маршмеллоу", callback_data="decor_marshmallow"),
-            InlineKeyboardButton(text="Марципан", callback_data="decor_marzipan"),
-        ]
-    ])
+    # Предположим, что ваш CustomCake имеет поле DECOR_CHOICES, где хранятся декоры
+    decor_choices = dict(CustomCake.DECOR_CHOICES)
+
+    # Создаем кнопки
+    buttons = [
+        [InlineKeyboardButton(text=decor_text, callback_data=f"decor_{decor_value}")]
+        for decor_value, decor_text in decor_choices.items()
+    ]
+
+    # Инициализируем InlineKeyboardMarkup с кнопками
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
 
 

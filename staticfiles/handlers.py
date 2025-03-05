@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-from bot.models import DeliveryState, CustomCakeState, StandardCake, CakeOrder
+from bot.models import DeliveryState, CustomCakeState, StandardCake, CakeOrder, CustomCake
 from asgiref.sync import sync_to_async
 import logging
 from aiogram import Bot, types
@@ -289,10 +289,9 @@ async def level_selected(callback: CallbackQuery, state: FSMContext):
 async def shape_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор формы торта"""
     shape = callback.data.split("_")[1]
-    shape_name = SHAPE_DICT.get(shape, shape)  # Получаем русское название
+    shape_name = CustomCake.get_shape_dict().get(shape, shape)  # Получаем название из модели
 
     await state.update_data(shape=shape)
-
     await state.set_state(CustomCakeState.waiting_for_topping)
 
     await callback.message.answer(
@@ -302,15 +301,13 @@ async def shape_selected(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-
 @router.callback_query(F.data.startswith("topping_"))
 async def topping_selected(callback: CallbackQuery, state: FSMContext):
-    """Обрабатываем выбор начинки"""
+    """Обрабатываем выбор топинга"""
     topping = callback.data.split("_", 1)[1] 
-    topping_name = TOPPING_DICT.get(topping, topping)  # Получаем русское название
+    topping_name = CustomCake.get_topping_dict().get(topping, topping)  # Получаем название из модели
 
     await state.update_data(topping=topping)
-
     await state.set_state(CustomCakeState.waiting_for_berries)
 
     await callback.message.answer(
@@ -320,15 +317,13 @@ async def topping_selected(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-
 @router.callback_query(F.data.startswith("berry_"))
 async def berry_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор ягод"""
     berry = callback.data.split("_")[1]
-    berry_name = BERRY_DICT.get(berry, berry)  # Получаем русское название
+    berry_name = CustomCake.get_berry_dict().get(berry, berry)  # Получаем название из модели
 
     await state.update_data(berry=berry)
-
     await state.set_state(CustomCakeState.waiting_for_decor)
 
     await callback.message.answer(
