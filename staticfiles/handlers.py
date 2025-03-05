@@ -4,7 +4,13 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-from bot.models import DeliveryState, CustomCakeState, StandardCake, CakeOrder, CustomCake
+from bot.models import (
+    DeliveryState,
+    CustomCakeState,
+    StandardCake,
+    CakeOrder,
+    CustomCake,
+)
 from asgiref.sync import sync_to_async
 import logging
 from asgiref.sync import sync_to_async
@@ -92,22 +98,24 @@ async def order_cake_callback(callback: CallbackQuery):
 @sync_to_async
 def get_all_cakes():
     try:
-        return list(
-            StandardCake.objects.all())
+        return list(StandardCake.objects.all())
     except Exception as e:
         print(f"Error: {e}")
         return []
+
 
 @router.callback_query(F.data == "view_prices")
 async def view_prices_callback(callback: CallbackQuery):
     """Обрабатывает нажатие на кнопку 'Просмотреть цены'."""
     cakes = await get_all_cakes()
-    price_list= "Вот наш прайс-лист:\n"
+    price_list = "Вот наш прайс-лист:\n"
 
     for index, cake in enumerate(cakes, start=1):
-        price_list += f"{index}. {cake.name}\n" \
-                      f"Описание: {cake.description}\n" \
-                      f"Цена: {cake.price} руб.\n\n"
+        price_list += (
+            f"{index}. {cake.name}\n"
+            f"Описание: {cake.description}\n"
+            f"Цена: {cake.price} руб.\n\n"
+        )
     await callback.message.answer(price_list)
 
 
@@ -145,7 +153,9 @@ async def ready_cake_selected(callback: CallbackQuery, state: FSMContext):
     selected_cake = await get_cake_by_id(cake_id)  # Получаем торт из базы асинхронно
 
     if selected_cake:
-        await state.update_data(selected_cake=f"Торт '{selected_cake.name}' - {selected_cake.price} руб.")
+        await state.update_data(
+            selected_cake=f"Торт '{selected_cake.name}' - {selected_cake.price} руб."
+        )
         await callback.message.answer(
             f"✅ Вы выбрали торт *{selected_cake.name}*.",
             parse_mode="Markdown",
@@ -181,6 +191,35 @@ async def process_address(message: types.Message, state: FSMContext):
     await state.set_state(DeliveryState.waiting_for_comment)
 
 
+@router.callback_query(F.data == "order_custom_cake")
+async def order_custom_cake_callback(callback: CallbackQuery):
+    """Запуск кастомизации торта и выбор уровня"""
+    await callback.message.answer(
+        "Выберите уровень торта:", reply_markup=get_level_keyboard()
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("level_"))
+async def level_selected(callback: CallbackQuery, state: FSMContext):
+    """Обрабатываем выбор уровня торта"""
+    level = int(callback.data.split("_")[1])  # Преобразуем уровень в число
+
+    # Используем корректный метод для получения названия уровня
+    level_name = dict(CustomCake.LEVEL_CHOICES).get(level, f"{level} уровень")
+
+    await state.update_data(level=level)
+    print(f"Сохранённый уровень: {level}")
+
+    await state.set_state(CustomCakeState.waiting_for_shape)
+
+    await callback.message.answer(
+        f"Вы выбрали: {level_name}. 🎂\nТеперь выберите форму торта.",
+        reply_markup=get_shape_keyboard(),
+    )
+    await callback.answer()
+
+
 @sync_to_async
 def save_order(cake_order):
     cake_order.save()
@@ -199,26 +238,30 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
         # Ищем готовый торт в базе данных
         selected_cake = await get_cake_by_id(selected_cake_id)
         if not selected_cake:
-            await message.answer("❌ Ошибка: выбранный торт не найден. Попробуйте снова.")
+            await message.answer(
+                "❌ Ошибка: выбранный торт не найден. Попробуйте снова."
+            )
             return
         cake_price = selected_cake.price
         cake_name = selected_cake.name
     else:
         # Создаём кастомный торт, если ID нет (значит, пользователь выбрал кастомный вариант)
         selected_cake = CustomCake(
-            levels=user_data.get("level", 1),
+            levels=user_data.get("levels", 1),
             shape=user_data.get("shape", "round"),
             topping=user_data.get("topping", "none"),
             berries=user_data.get("berry", "none"),
             decor=user_data.get("decor", "none"),
-            cake_text=cake_text
+            cake_text=cake_text,
         )
         cake_price = selected_cake.calculate_price()
         cake_name = "Кастомный торт"
 
     # Создаём заказ
     cake_order = CakeOrder(
-        cake=selected_cake if selected_cake_id else None,  # Привязываем готовый торт, если он есть
+        cake=selected_cake
+        if selected_cake_id
+        else None,  # Привязываем готовый торт, если он есть
         cake_text=cake_text,
         address=address,
         comment=comment,
@@ -243,48 +286,20 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
     await state.clear()
 
 
-
-
-
-
-@router.callback_query(F.data == "order_custom_cake")
-async def order_custom_cake_callback(callback: CallbackQuery):
-    """Запуск кастомизации торта и выбор уровня"""
-    await callback.message.answer(
-        "Выберите уровень торта:",
-        reply_markup=get_level_keyboard()
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("level_"))
-async def level_selected(callback: CallbackQuery, state: FSMContext):
-    """Обрабатываем выбор уровня торта"""
-    level = callback.data.split("_")[1]
-
-    await state.update_data(level=level)
-
-    await state.set_state(CustomCakeState.waiting_for_shape)
-
-    await callback.message.answer(
-        f"Вы выбрали: {level} уровень. 🎂\nТеперь выберите форму торта.",
-        reply_markup=get_shape_keyboard()
-    )
-    await callback.answer()
-
-
 @router.callback_query(F.data.startswith("shape_"))
 async def shape_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор формы торта"""
     shape = callback.data.split("_")[1]
-    shape_name = CustomCake.get_shape_dict().get(shape, shape)  # Получаем название из модели
+    shape_name = CustomCake.get_shape_dict().get(
+        shape, shape
+    )  # Получаем название из модели
 
     await state.update_data(shape=shape)
     await state.set_state(CustomCakeState.waiting_for_topping)
 
     await callback.message.answer(
         f"Вы выбрали форму: {shape_name}. 🎂\nТеперь выберите топинг для торта.",
-        reply_markup=get_topping_keyboard()
+        reply_markup=get_topping_keyboard(),
     )
     await callback.answer()
 
@@ -292,15 +307,17 @@ async def shape_selected(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("topping_"))
 async def topping_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор топинга"""
-    topping = callback.data.split("_", 1)[1] 
-    topping_name = CustomCake.get_topping_dict().get(topping, topping)  # Получаем название из модели
+    topping = callback.data.split("_", 1)[1]
+    topping_name = CustomCake.get_topping_dict().get(
+        topping, topping
+    )  # Получаем название из модели
 
     await state.update_data(topping=topping)
     await state.set_state(CustomCakeState.waiting_for_berries)
 
     await callback.message.answer(
         f"Вы выбрали топинг: {topping_name}. 🍫\nТеперь выберите ягоды для торта.",
-        reply_markup=get_berries_keyboard()
+        reply_markup=get_berries_keyboard(),
     )
     await callback.answer()
 
@@ -309,14 +326,16 @@ async def topping_selected(callback: CallbackQuery, state: FSMContext):
 async def berry_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор ягод"""
     berry = callback.data.split("_")[1]
-    berry_name = CustomCake.get_berry_dict().get(berry, berry)  # Получаем название из модели
+    berry_name = CustomCake.get_berry_dict().get(
+        berry, berry
+    )  # Получаем название из модели
 
     await state.update_data(berry=berry)
     await state.set_state(CustomCakeState.waiting_for_decor)
 
     await callback.message.answer(
         f"Вы выбрали ягоду: {berry_name}. 🍓\nТеперь выберите декор для торта.",
-        reply_markup=get_decor_keyboard()
+        reply_markup=get_decor_keyboard(),
     )
     await callback.answer()
 
@@ -325,7 +344,9 @@ async def berry_selected(callback: CallbackQuery, state: FSMContext):
 async def decor_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор декора"""
     decor = callback.data.split("_")[1]
-    decor_name = CustomCake.get_shape_dict().get(decor, decor)  # Получаем русское название
+    decor_name = CustomCake.get_decor_dict().get(
+        decor, decor
+    )  # Получаем русское название
 
     await state.update_data(decor=decor)
 
@@ -341,10 +362,23 @@ async def decor_selected(callback: CallbackQuery, state: FSMContext):
 @router.message(CustomCakeState.waiting_for_text)
 async def receive_cake_text(message: types.Message, state: FSMContext):
     """Формируем итоговый заказ после ввода текста."""
+
+    # Получаем сохранённые данные
+    data = await state.get_data()
+
+    # Проверяем, есть ли там уровень
+    level = data.get("level")
+
+    if level is None:
+        await message.answer("Ошибка: уровень торта не был выбран. Попробуйте заново.")
+        return
+
+    # Получаем название уровня
+    level_name = dict(CustomCake.LEVEL_CHOICES).get(level, f"{level} уровень")
     cake_text = message.text.strip().lower()
 
     if cake_text == "нет":
-        cake_text = None  
+        cake_text = None
 
     await state.update_data(cake_text=cake_text)
     user_data = await state.get_data()
@@ -352,7 +386,7 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     selected_cake = user_data.get("selected_cake", "Кастомный торт")
 
     if "Кастомный торт" in selected_cake:
-        level = user_data.get("level", 1)  # По умолчанию 1 уровень
+        levels = user_data.get("levels", 1)  # По умолчанию 1 уровень
         shape = user_data.get("shape", "round")  # По умолчанию круглый
         topping = user_data.get("topping", "none")
         berry = user_data.get("berry", "none")
@@ -360,12 +394,12 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
 
         # Создаём объект кастомного торта
         custom_cake = CustomCake(
-            levels=level,
+            levels=levels,
             shape=shape,
             topping=topping,
             berries=berry,
             decor=decor,
-            cake_text=cake_text
+            cake_text=cake_text,
         )
 
         # Вычисляем цену через метод экземпляра
@@ -373,7 +407,7 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
 
         result_message = (
             "🎂 *Ваш заказ готов!*\n\n"
-            f"📏 Уровень: {CustomCake.get_level_dict().get(level, 'Не указан')}\n"
+            f"📏 Уровень: {level_name}\n"
             f"🔵 Форма: {CustomCake.get_shape_dict().get(shape, 'Не указана')}\n"
             f"🍫 Топпинг: {CustomCake.get_topping_dict().get(topping, 'Не указан')}\n"
             f"🍓 Ягоды: {CustomCake.get_berry_dict().get(berry, 'Не указаны')}\n"
@@ -384,7 +418,7 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
         )
     else:
         # Для обычных тортов вызываем метод класса, если он есть (добавь его в модель)
-        total_price = CustomCake.calculate_price(selected_cake, cake_text)  
+        total_price = CustomCake.calculate_price(selected_cake, cake_text)
         result_message = (
             f"✅ Вы выбрали торт *{selected_cake}*.\n\n"
             f"🖋 Надпись: {cake_text or 'Без надписи'}\n"
@@ -394,8 +428,6 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
 
     await message.answer(result_message, parse_mode="Markdown")
     await state.set_state(DeliveryState.waiting_for_address)
-
-
 
 
 @router.message(DeliveryState.waiting_for_address)

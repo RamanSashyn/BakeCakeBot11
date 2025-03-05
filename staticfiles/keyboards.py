@@ -114,6 +114,7 @@ def get_level_keyboard():
     return keyboard
 
 
+
 def get_shape_keyboard():
     """Создаем клавиатуру для выбора формы торта"""
     # Предположим, что ваш CustomCake имеет поле SHAPE_CHOICES, где хранятся формы

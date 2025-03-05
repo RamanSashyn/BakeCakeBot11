@@ -12,7 +12,7 @@ from aiogram import Bot, Dispatcher
 from staticfiles.handlers import router  # Если это необходимо
 
 # Импортируйте ваш бот и другие компоненты только после настройки Django
-TOKEN = "7996830180:AAG7WWT5MOKU8s40MfCxrAKMeYyulVh-BPM"
+TOKEN = "7496626388:AAH3n8g35MqRRLw_E9kyGvvr87fLrU63HBQ"
 
 async def main():
     bot = Bot(token=TOKEN)
