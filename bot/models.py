@@ -117,7 +117,7 @@ class CustomCake(models.Model):
 
     def __str__(self):
         return (
-            f"Кастомный торт ({self.levels} уровня, {self.shape}) - {self.price} руб."
+            f"Кастомный торт"
         )
 
 
@@ -146,6 +146,37 @@ class CakeOrder(models.Model):
 
 
 class CustomCakeOrder(models.Model):
+    SHAPE_CHOICES = [
+        ("round", "Круглый"),
+        ("square", "Квадратный"),
+        ("heart", "Сердце"),
+    ]
+
+    LEVEL_CHOICES = [
+        (1, "1 уровень"),
+        (2, "2 уровня"),
+        (3, "3 уровня"),
+    ]
+
+    TOPPING_CHOICES = [
+        ("chocolate", "Шоколадный"),
+        ("caramel", "Карамельный"),
+        ("berry", "Ягодный"),
+    ]
+
+    BERRY_CHOICES = [
+        ("strawberry", "Клубника"),
+        ("raspberry", "Малина"),
+        ("blueberry", "Голубика"),
+        ("none", "Без ягод"),
+    ]
+
+    DECOR_CHOICES = [
+        ("nuts", "Орехи"),
+        ("cookies", "Печенье"),
+        ("marshmallow", "Зефир"),
+        ("none", "Без декора"),
+    ]
     custom_cake = models.OneToOneField(
         CustomCake,
         on_delete=models.CASCADE,
@@ -166,10 +197,10 @@ class CustomCakeOrder(models.Model):
         auto_now_add=True, verbose_name="Дата оформления заказа"
     )
     telegram_id = models.CharField(max_length=255, null=True, blank=True)
-    shape = models.CharField(max_length=20, verbose_name="Форма", default="round")
     levels = models.IntegerField(
         verbose_name="Уровни", null=True, blank=True, default=1
     )
+    shape = models.CharField(max_length=20, verbose_name="Форма", default="round")
     topping = models.CharField(
         max_length=20, verbose_name="Топпинг", null=True, blank=True, default="none"
     )

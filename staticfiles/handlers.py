@@ -237,6 +237,11 @@ def save_custom_cake(custom_cake):
 async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
     """Сохраняем комментарий, завершаем процесс заказа и уведомляем администраторов."""
     user_data = await state.get_data()
+    levels_str = user_data.get("levels", "1")  # Берём значение из состояния
+    try:
+        levels = int(levels_str)  # Пробуем привести к int
+    except ValueError:
+        levels = 1  
     address = user_data.get("address")
     comment = message.text
     selected_cake_id = user_data.get("selected_cake_id")
@@ -250,16 +255,20 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
                 "❌ Ошибка: выбранный торт не найден. Попробуйте снова."
             )
             return
-        cake_price = selected_cake.price
+
+        final_price = selected_cake.price
         cake_name = selected_cake.name
 
+        if cake_text and cake_text.lower() != "нет":
+            final_price += 500
+        
         # Создаём заказ для стандартного торта
         cake_order = CakeOrder(
             cake=selected_cake,  # Привязываем готовый торт
             cake_text=cake_text,
             address=address,
             comment=comment,
-            price=cake_price,
+            price=final_price,
             telegram_id=message.from_user.username,
         )
 
@@ -273,16 +282,17 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
 
         await message.answer(
             f"✅ Ваш заказ оформлен!\n\n"
-            f"Вы выбрали: {cake_name} - {cake_price} руб.\n"
+            f"Вы выбрали: {cake_name}\n"
             f"Дополнительно: {'Текст на торте: ' + cake_text if cake_text else 'Без надписи'}\n"
             f"📍 Адрес доставки: {address}\n"
-            f"💬 Пожелания: {comment}\n\n"
+            f"💬 Пожелания: {comment}\n"
+            f"💰 Итоговая цена: {final_price} руб.\n\n"
             f"Спасибо, что выбрали нас! 🎂"
         )
     else:
         # Создаём кастомный торт
         selected_cake = CustomCake(
-            levels=user_data.get("levels", 1),
+            levels=levels,
             shape=user_data.get("shape", "round"),
             topping=user_data.get("topping", "none"),
             berries=user_data.get("berry", "none"),
@@ -298,8 +308,13 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
 
         # Создаём заказ для кастомного торта
         custom_cake_order = CustomCakeOrder(
-            custom_cake=selected_cake,  # Привязываем кастомный торт
+            custom_cake=selected_cake,
             cake_text=cake_text,
+            shape=CustomCake.get_shape_dict().get(user_data.get("shape", "Неизвестно")),
+            levels=levels,  
+            topping=CustomCake.get_topping_dict().get(user_data.get("topping", "Без топпинга")),
+            berries=CustomCake.get_berry_dict().get(user_data.get("berry", "Без ягод")),
+            decor=CustomCake.get_decor_dict().get(user_data.get("decor", "none")),
             address=address,
             comment=comment,
             price=cake_price,
@@ -454,7 +469,7 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
 
     # Для кастомного торта
     else:
-        levels = user_data.get("levels", 1)  # По умолчанию 1 уровень
+        levels= int(user_data.get("levels", 1)), # По умолчанию 1 уровень
         shape = user_data.get("shape", "round")  # По умолчанию круглый
         topping = user_data.get("topping", "none")
         berry = user_data.get("berry", "none")
@@ -500,3 +515,4 @@ async def receive_address(message: types.Message, state: FSMContext):
     )
 
     await state.set_state(DeliveryState.waiting_for_comment)
+    

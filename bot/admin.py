@@ -5,7 +5,7 @@ from .vk_utils import count_clicks
 
 @admin.register(CustomCake)
 class CustomCakeAdmin(admin.ModelAdmin):
-    list_display = ('shape', 'levels', 'topping', 'berries', 'decor', 'cake_text', 'price')
+    list_display = ( 'shape', 'levels', 'topping', 'berries', 'decor', 'cake_text', 'price')
     search_fields = ('shape', 'topping', 'berries', 'decor')
     
 
@@ -22,7 +22,7 @@ class CakeOrderAdmin(admin.ModelAdmin):
 
 @admin.register(CustomCakeOrder)
 class CustomCakeOrderAdmin(admin.ModelAdmin):
-    list_display = ('custom_cake', 'address', 'price', 'created_at')
+    list_display = ('custom_cake',  'shape', 'levels', 'topping', 'berries', 'decor', 'cake_text', 'address', 'price', 'telegram_id', 'comment', 'created_at')
     search_fields = ('custom_cake__shape', 'address')
 
 
