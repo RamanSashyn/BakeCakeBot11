@@ -4,7 +4,8 @@ from django.db import models
 from django.utils.timezone import now
 from .vk_utils import generate_vk_short_link, count_clicks
 
-ACCESS_TOKEN = '1fe567ad1fe567ad1fe567adf51cce744a11fe51fe567ad785a30ef24c275e663c9b6b6'
+ACCESS_TOKEN = "1fe567ad1fe567ad1fe567adf51cce744a11fe51fe567ad785a30ef24c275e663c9b6b6"
+
 
 class StandardCake(models.Model):
     name = models.CharField(max_length=255)
@@ -17,35 +18,35 @@ class StandardCake(models.Model):
 
 class CustomCake(models.Model):
     SHAPE_CHOICES = [
-        ('round', 'Круглый'),
-        ('square', 'Квадратный'),
-        ('heart', 'Сердце'),
+        ("round", "Круглый"),
+        ("square", "Квадратный"),
+        ("heart", "Сердце"),
     ]
 
     LEVEL_CHOICES = [
-        (1, '1 уровень'),
-        (2, '2 уровня'),
-        (3, '3 уровня'),
+        (1, "1 уровень"),
+        (2, "2 уровня"),
+        (3, "3 уровня"),
     ]
 
     TOPPING_CHOICES = [
-        ('chocolate', 'Шоколадный'),
-        ('caramel', 'Карамельный'),
-        ('berry', 'Ягодный'),
+        ("chocolate", "Шоколадный"),
+        ("caramel", "Карамельный"),
+        ("berry", "Ягодный"),
     ]
 
     BERRY_CHOICES = [
-        ('strawberry', 'Клубника'),
-        ('raspberry', 'Малина'),
-        ('blueberry', 'Голубика'),
-        ('none', 'Без ягод'),
+        ("strawberry", "Клубника"),
+        ("raspberry", "Малина"),
+        ("blueberry", "Голубика"),
+        ("none", "Без ягод"),
     ]
 
     DECOR_CHOICES = [
-        ('nuts', 'Орехи'),
-        ('cookies', 'Печенье'),
-        ('marshmallow', 'Зефир'),
-        ('none', 'Без декора'),
+        ("nuts", "Орехи"),
+        ("cookies", "Печенье"),
+        ("marshmallow", "Зефир"),
+        ("none", "Без декора"),
     ]
 
     shape = models.CharField(max_length=20, choices=SHAPE_CHOICES, verbose_name="Форма")
@@ -87,7 +88,7 @@ class CustomCake(models.Model):
     @classmethod
     def get_decor_dict(cls):
         return dict(cls.DECOR_CHOICES)
-        
+
     def calculate_price(self):
         base_price = 2000
 
@@ -96,15 +97,15 @@ class CustomCake(models.Model):
         elif self.levels == 3:
             base_price += 2000
 
-        base_price += 300  
+        base_price += 300
 
-        if self.berries != 'none':
+        if self.berries != "none":
             base_price += 500
 
-        if self.decor != 'none':
+        if self.decor != "none":
             base_price += 400
 
-        if self.cake_text and self.cake_text.lower() != 'нет':
+        if self.cake_text and self.cake_text.lower() != "нет":
             base_price += 500
 
         self.price = base_price
@@ -115,11 +116,15 @@ class CustomCake(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Кастомный торт ({self.levels} уровня, {self.shape}) - {self.price} руб."
+        return (
+            f"Кастомный торт ({self.levels} уровня, {self.shape}) - {self.price} руб."
+        )
 
 
 class CakeOrder(models.Model):
-    cake = models.ForeignKey(StandardCake, on_delete=models.SET_NULL, null=True, blank=True)
+    cake = models.ForeignKey(
+        StandardCake, on_delete=models.SET_NULL, null=True, blank=True
+    )
     cake_text = models.CharField(max_length=255, blank=True, null=True)
     address = models.CharField(max_length=255)
     comment = models.TextField(blank=True, null=True)
@@ -141,18 +146,42 @@ class CakeOrder(models.Model):
 
 
 class CustomCakeOrder(models.Model):
-    custom_cake = models.OneToOneField(CustomCake, on_delete=models.CASCADE, related_name="order", verbose_name="Кастомный торт")
+    custom_cake = models.OneToOneField(
+        CustomCake,
+        on_delete=models.CASCADE,
+        related_name="order",
+        verbose_name="Кастомный торт",
+    )
     address = models.CharField(max_length=255, verbose_name="Адресс")
     comment = models.TextField(blank=True, null=True, verbose_name="Пожелания")
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True, verbose_name="Стоимость")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата оформления заказа")
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        null=True,
+        blank=True,
+        verbose_name="Стоимость",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Дата оформления заказа"
+    )
     telegram_id = models.CharField(max_length=255, null=True, blank=True)
     shape = models.CharField(max_length=20, verbose_name="Форма", default="round")
-    levels = models.IntegerField(verbose_name="Уровни", null=True, blank=True, default=1)
-    topping = models.CharField(max_length=20, verbose_name="Топпинг", null=True, blank=True, default="none")
-    berries = models.CharField(max_length=20, verbose_name="Ягоды", default="none", null=True, blank=True)
-    decor = models.CharField(max_length=20, default="none", verbose_name="Декор", null=True, blank=True)
-    cake_text = models.CharField(max_length=255, blank=True, null=True, verbose_name="Надпись", default="")
+    levels = models.IntegerField(
+        verbose_name="Уровни", null=True, blank=True, default=1
+    )
+    topping = models.CharField(
+        max_length=20, verbose_name="Топпинг", null=True, blank=True, default="none"
+    )
+    berries = models.CharField(
+        max_length=20, verbose_name="Ягоды", default="none", null=True, blank=True
+    )
+    decor = models.CharField(
+        max_length=20, default="none", verbose_name="Декор", null=True, blank=True
+    )
+    cake_text = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name="Надпись", default=""
+    )
 
     def calculate_price(self):
         self.price = self.custom_cake.price
@@ -164,7 +193,6 @@ class CustomCakeOrder(models.Model):
 
     def __str__(self):
         return f"Заказ кастомного торта - {self.price} руб."
-
 
 
 class DeliveryState(StatesGroup):
@@ -198,7 +226,7 @@ class ShortLink(models.Model):
     def get_clicks_count(self):
         clicks = count_clicks(ACCESS_TOKEN, self.short_url)
         self.clicks_count = clicks[0] if clicks else 0
-        self.save(update_fields=['clicks_count'])
+        self.save(update_fields=["clicks_count"])
 
     def __str__(self):
         return self.short_url

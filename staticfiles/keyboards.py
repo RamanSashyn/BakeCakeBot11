@@ -66,8 +66,7 @@ def get_order_menu():
 @sync_to_async
 def get_cakes_from_db():
     try:
-        return list(
-            StandardCake.objects.all())
+        return list(StandardCake.objects.all())
     except Exception as e:
         print(f"Error: {e}")
         return []
@@ -82,14 +81,22 @@ async def get_ready_cakes_menu():
 
     for cake in cakes:
         button_text = f"🍰 {cake.name} - {cake.price} руб."
-        callback_data = f"cake_{cake.id}"  # Используем ID торта в качестве callback_data
-        inline_buttons.append(InlineKeyboardButton(text=button_text, callback_data=callback_data))
+        callback_data = (
+            f"cake_{cake.id}"  # Используем ID торта в качестве callback_data
+        )
+        inline_buttons.append(
+            InlineKeyboardButton(text=button_text, callback_data=callback_data)
+        )
 
     # Разбиваем кнопки на строки (например, по 2 кнопки в строке)
     row_width = 2
-    rows = [inline_buttons[i:i + row_width] for i in range(0, len(inline_buttons), row_width)]
+    rows = [
+        inline_buttons[i : i + row_width]
+        for i in range(0, len(inline_buttons), row_width)
+    ]
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
 
 @sync_to_async
 def get_all_custom_cakes():
@@ -100,6 +107,7 @@ def get_all_custom_cakes():
         print(f"Ошибка при получении кастомных тортов: {e}")
         return []
 
+
 def get_level_keyboard():
     # Получаем все доступные уровни из LEVEL_CHOICES
     level_choices = dict(CustomCake.LEVEL_CHOICES)
@@ -109,10 +117,9 @@ def get_level_keyboard():
         for level_value, level_text in level_choices.items()
     ]
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)  
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     return keyboard
-
 
 
 def get_shape_keyboard():
@@ -138,7 +145,11 @@ def get_topping_keyboard():
 
     # Создаем кнопки
     buttons = [
-        [InlineKeyboardButton(text=topping_text, callback_data=f"topping_{topping_value}")]
+        [
+            InlineKeyboardButton(
+                text=topping_text, callback_data=f"topping_{topping_value}"
+            )
+        ]
         for topping_value, topping_text in topping_choices.items()
     ]
 
@@ -162,6 +173,7 @@ def get_berries_keyboard():
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
 
+
 def get_decor_keyboard():
     """Создаем клавиатуру для выбора декора"""
     # Предположим, что ваш CustomCake имеет поле DECOR_CHOICES, где хранятся декоры
@@ -176,9 +188,3 @@ def get_decor_keyboard():
     # Инициализируем InlineKeyboardMarkup с кнопками
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
-
-
-
-
-
-

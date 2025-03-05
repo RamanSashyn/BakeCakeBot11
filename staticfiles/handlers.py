@@ -10,6 +10,7 @@ from bot.models import (
     StandardCake,
     CakeOrder,
     CustomCake,
+    CustomCakeOrder,
 )
 from asgiref.sync import sync_to_async
 import logging
@@ -220,14 +221,21 @@ async def level_selected(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+# Это будет работать асинхронно с использованием sync_to_async
 @sync_to_async
-def save_order(cake_order):
+def save_cake_order(cake_order):
     cake_order.save()
+
+
+# Это будет работать асинхронно с использованием sync_to_async
+@sync_to_async
+def save_custom_cake(custom_cake):
+    custom_cake.save()
 
 
 @router.message(DeliveryState.waiting_for_comment)
 async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
-    """Сохраняем комментарий, завершаем процесс заказа и уведомляет администраторов."""
+    """Сохраняем комментарий, завершаем процесс заказа и уведомляем администраторов."""
     user_data = await state.get_data()
     address = user_data.get("address")
     comment = message.text
@@ -244,8 +252,35 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
             return
         cake_price = selected_cake.price
         cake_name = selected_cake.name
+
+        # Создаём заказ для стандартного торта
+        cake_order = CakeOrder(
+            cake=selected_cake,  # Привязываем готовый торт
+            cake_text=cake_text,
+            address=address,
+            comment=comment,
+            price=cake_price,
+            telegram_id=message.from_user.username,
+        )
+
+        # Сохраняем заказ через sync_to_async
+        await save_cake_order(cake_order)
+
+        # Уведомление в админку для стандартного торта
+        await send_order_notification(
+            bot, message.from_user, cake_name, address, comment, cake_text
+        )
+
+        await message.answer(
+            f"✅ Ваш заказ оформлен!\n\n"
+            f"Вы выбрали: {cake_name} - {cake_price} руб.\n"
+            f"Дополнительно: {'Текст на торте: ' + cake_text if cake_text else 'Без надписи'}\n"
+            f"📍 Адрес доставки: {address}\n"
+            f"💬 Пожелания: {comment}\n\n"
+            f"Спасибо, что выбрали нас! 🎂"
+        )
     else:
-        # Создаём кастомный торт, если ID нет (значит, пользователь выбрал кастомный вариант)
+        # Создаём кастомный торт
         selected_cake = CustomCake(
             levels=user_data.get("levels", 1),
             shape=user_data.get("shape", "round"),
@@ -254,37 +289,41 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
             decor=user_data.get("decor", "none"),
             cake_text=cake_text,
         )
+
+        # Сохраняем кастомный торт через sync_to_async
+        await save_custom_cake(selected_cake)
+
         cake_price = selected_cake.calculate_price()
         cake_name = "Кастомный торт"
 
-    # Создаём заказ
-    cake_order = CakeOrder(
-        cake=selected_cake
-        if selected_cake_id
-        else None,  # Привязываем готовый торт, если он есть
-        cake_text=cake_text,
-        address=address,
-        comment=comment,
-        price=cake_price,
-        telegram_id=message.from_user.username,
-    )
-    await save_order(cake_order)
+        # Создаём заказ для кастомного торта
+        custom_cake_order = CustomCakeOrder(
+            custom_cake=selected_cake,  # Привязываем кастомный торт
+            cake_text=cake_text,
+            address=address,
+            comment=comment,
+            price=cake_price,
+            telegram_id=message.from_user.username,
+        )
 
-    await message.answer(
-        f"✅ Ваш заказ оформлен!\n\n"
-        f"Вы выбрали: {cake_name} - {cake_price} руб.\n"
-        f"Дополнительно: {'Текст на торте: ' + cake_text if cake_text else 'Без надписи'}\n"
-        f"📍 Адрес доставки: {address}\n"
-        f"💬 Пожелания: {comment}\n\n"
-        f"Спасибо, что выбрали нас! 🎂"
-    )
+        # Сохраняем заказ через sync_to_async
+        await save_cake_order(custom_cake_order)
 
-    await send_order_notification(
-        bot, message.from_user, cake_name, address, comment, cake_text
-    )
+        # Уведомление в админку для кастомного торта
+        await send_order_notification(
+            bot, message.from_user, cake_name, address, comment, cake_text
+        )
+
+        await message.answer(
+            f"✅ Ваш заказ оформлен!\n\n"
+            f"Вы выбрали: {cake_name} - {cake_price} руб.\n"
+            f"Дополнительно: {'Текст на торте: ' + cake_text if cake_text else 'Без надписи'}\n"
+            f"📍 Адрес доставки: {address}\n"
+            f"💬 Пожелания: {comment}\n\n"
+            f"Спасибо, что выбрали нас! 🎂"
+        )
 
     await state.clear()
-
 
 
 @router.callback_query(F.data.startswith("shape_"))
@@ -375,7 +414,9 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
         level = data.get("level")
 
         if level is None:
-            await message.answer("Ошибка: уровень торта не был выбран. Попробуйте заново.")
+            await message.answer(
+                "Ошибка: уровень торта не был выбран. Попробуйте заново."
+            )
             return
 
         level_name = dict(CustomCake.LEVEL_CHOICES).get(level, f"{level} уровень")
@@ -446,7 +487,6 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
 
     await message.answer(result_message, parse_mode="Markdown")
     await state.set_state(DeliveryState.waiting_for_address)
-
 
 
 @router.message(DeliveryState.waiting_for_address)
