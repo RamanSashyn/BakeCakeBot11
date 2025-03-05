@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from bot.models import DeliveryState, CustomCakeState, StandardCake, CakeOrder, CustomCake
 from asgiref.sync import sync_to_async
 import logging
+from asgiref.sync import sync_to_async
 from aiogram import Bot, types
 from config import ADMIN_GROUP_ID
 from .keyboards import (
@@ -23,40 +24,7 @@ from .keyboards import (
 from .notifications import send_order_notification
 
 router = Router()
-logger = logging.getLogger(__name__)
 
-
-SHAPE_DICT = {
-    'square': 'Квадрат',
-    'circle': 'Круг',
-    'rectangle': 'Прямоугольник'
-}
-
-TOPPING_DICT = {
-    'none': 'Без топпинга',
-    'white_sauce': 'Белый соус',
-    'caramel_syrup': 'Карамельный сироп',
-    'maple_syrup': 'Кленовый сироп',
-    'strawberry_syrup': 'Клубничный сироп',
-    'blueberry_syrup': 'Черничный сироп',
-    'milk_chocolate': 'Молочный шоколад'
-}
-
-BERRY_DICT = {
-    'blackberry': 'Ежевика',
-    'raspberry': 'Малина',
-    'blueberry': 'Голубика',
-    'strawberry': 'Клубника'
-}
-
-DECOR_DICT = {
-    'pistachios': 'Фисташки',
-    'meringue': 'Безе',
-    'hazelnut': 'Фундук',
-    'pecan': 'Пекан',
-    'marshmallow': 'Маршмеллоу',
-    'marzipan': 'Марципан'
-}
 
 @router.message(Command("get_group_id"))
 async def get_group_id(message: types.Message):
@@ -227,25 +195,41 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
     selected_cake_id = user_data.get("selected_cake_id")
     cake_text = user_data.get("cake_text", None)
 
-    selected_cake = await get_cake_by_id(selected_cake_id)
+    if selected_cake_id:
+        # Ищем готовый торт в базе данных
+        selected_cake = await get_cake_by_id(selected_cake_id)
+        if not selected_cake:
+            await message.answer("❌ Ошибка: выбранный торт не найден. Попробуйте снова.")
+            return
+        cake_price = selected_cake.price
+        cake_name = selected_cake.name
+    else:
+        # Создаём кастомный торт, если ID нет (значит, пользователь выбрал кастомный вариант)
+        selected_cake = CustomCake(
+            levels=user_data.get("level", 1),
+            shape=user_data.get("shape", "round"),
+            topping=user_data.get("topping", "none"),
+            berries=user_data.get("berry", "none"),
+            decor=user_data.get("decor", "none"),
+            cake_text=cake_text
+        )
+        cake_price = selected_cake.calculate_price()
+        cake_name = "Кастомный торт"
 
-    if not selected_cake:
-        await message.answer("Ошибка! Торт не был выбран.")
-        return
-
+    # Создаём заказ
     cake_order = CakeOrder(
-        cake=selected_cake,
+        cake=selected_cake if selected_cake_id else None,  # Привязываем готовый торт, если он есть
         cake_text=cake_text,
         address=address,
         comment=comment,
-        price=selected_cake.price,  # Для проверки пока без дополнительной надписи
-        telegram_id=message.from_user.username,  # Сохраняем ID Telegram
+        price=cake_price,
+        telegram_id=message.from_user.username,
     )
     await save_order(cake_order)
 
     await message.answer(
         f"✅ Ваш заказ оформлен!\n\n"
-        f"Вы выбрали: {selected_cake.name} - {selected_cake.price} руб.\n"
+        f"Вы выбрали: {cake_name} - {cake_price} руб.\n"
         f"Дополнительно: {'Текст на торте: ' + cake_text if cake_text else 'Без надписи'}\n"
         f"📍 Адрес доставки: {address}\n"
         f"💬 Пожелания: {comment}\n\n"
@@ -253,10 +237,14 @@ async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
     )
 
     await send_order_notification(
-        bot, message.from_user, selected_cake.name, address, comment, cake_text
+        bot, message.from_user, cake_name, address, comment, cake_text
     )
 
     await state.clear()
+
+
+
+
 
 
 @router.callback_query(F.data == "order_custom_cake")
@@ -337,7 +325,7 @@ async def berry_selected(callback: CallbackQuery, state: FSMContext):
 async def decor_selected(callback: CallbackQuery, state: FSMContext):
     """Обрабатываем выбор декора"""
     decor = callback.data.split("_")[1]
-    decor_name = DECOR_DICT.get(decor, decor)  # Получаем русское название
+    decor_name = CustomCake.get_shape_dict().get(decor, decor)  # Получаем русское название
 
     await state.update_data(decor=decor)
 
@@ -362,40 +350,49 @@ async def receive_cake_text(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
 
     selected_cake = user_data.get("selected_cake", "Кастомный торт")
+
     if "Кастомный торт" in selected_cake:
-        level = user_data.get("level", "Не указан")
-        shape = user_data.get("shape", "Не указана")
-        topping = user_data.get("topping", "Не указан")
-        berry = user_data.get("berry", "Не указаны")
-        decor = user_data.get("decor", "Без декора")  
+        level = user_data.get("level", 1)  # По умолчанию 1 уровень
+        shape = user_data.get("shape", "round")  # По умолчанию круглый
+        topping = user_data.get("topping", "none")
+        berry = user_data.get("berry", "none")
+        decor = user_data.get("decor", "none")
 
-        level = dict((item[0], item[1]) for item in Level.CHOICES).get(level, "Не указан")
-        shape = dict((item[0], item[1]) for item in Shape.CHOICES).get(shape, "Не указана")
-        topping = dict((item[0], item[1]) for item in Topping.CHOICES).get(topping, "Не указан")
-        berry = dict((item[0], item[1]) for item in Berry.CHOICES).get(berry, "Не указаны")
-        decor = dict((item[0], item[1]) for item in Decor.CHOICES).get(decor, "Без декора")
+        # Создаём объект кастомного торта
+        custom_cake = CustomCake(
+            levels=level,
+            shape=shape,
+            topping=topping,
+            berries=berry,
+            decor=decor,
+            cake_text=cake_text
+        )
 
-        cake_text = cake_text or "Без надписи"  
+        # Вычисляем цену через метод экземпляра
+        total_price = custom_cake.calculate_price()
 
         result_message = (
             "🎂 *Ваш заказ готов!*\n\n"
-            f"📏 Уровень: {level}\n"
-            f"🔵 Форма: {shape}\n"
-            f"🍫 Топпинг: {topping}\n"
-            f"🍓 Ягоды: {berry}\n"
-            f"✨ Декор: {decor}\n"
-            f"🖋 Надпись: {cake_text}\n\n"
+            f"📏 Уровень: {CustomCake.get_level_dict().get(level, 'Не указан')}\n"
+            f"🔵 Форма: {CustomCake.get_shape_dict().get(shape, 'Не указана')}\n"
+            f"🍫 Топпинг: {CustomCake.get_topping_dict().get(topping, 'Не указан')}\n"
+            f"🍓 Ягоды: {CustomCake.get_berry_dict().get(berry, 'Не указаны')}\n"
+            f"✨ Декор: {CustomCake.get_decor_dict().get(decor, 'Без декора')}\n"
+            f"🖋 Надпись: {cake_text or 'Без надписи'}\n"
+            f"💵 Общая цена: {total_price} руб.\n\n"
             "📍 Теперь укажите адрес доставки:"
         )
     else:
+        # Для обычных тортов вызываем метод класса, если он есть (добавь его в модель)
+        total_price = CustomCake.calculate_price(selected_cake, cake_text)  
         result_message = (
             f"✅ Вы выбрали торт *{selected_cake}*.\n\n"
-            f"🖋 Надпись: {cake_text or 'Без надписи'}\n\n"
+            f"🖋 Надпись: {cake_text or 'Без надписи'}\n"
+            f"💵 Общая цена: {total_price} руб.\n\n"
             "📍 Теперь укажите адрес доставки:"
         )
 
     await message.answer(result_message, parse_mode="Markdown")
-
     await state.set_state(DeliveryState.waiting_for_address)
 
 

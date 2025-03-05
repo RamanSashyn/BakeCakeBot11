@@ -32,6 +32,7 @@ class CustomCake(models.Model):
         ('chocolate', 'Шоколадный'),
         ('caramel', 'Карамельный'),
         ('berry', 'Ягодный'),
+        ('none', 'Без топпинга')
     ]
 
     BERRY_CHOICES = [
@@ -48,34 +49,17 @@ class CustomCake(models.Model):
         ('none', 'Без декора'),
     ]
 
-    order = models.OneToOneField(
-        "CakeOrder",
-        on_delete=models.CASCADE,
-        related_name="custom_cake",
-        verbose_name="Заказ",
-        null=True,
-        blank=True,
-    )
+    order = models.OneToOneField('CakeOrder', on_delete=models.CASCADE, related_name='custom_cake', verbose_name="Заказ", null=True, blank=True)
 
     shape = models.CharField(max_length=20, choices=SHAPE_CHOICES, verbose_name="Форма")
     levels = models.IntegerField(choices=LEVEL_CHOICES, verbose_name="Уровни")
-    topping = models.CharField(
-        max_length=20, choices=TOPPING_CHOICES, verbose_name="Топпинг"
-    )
-    berries = models.CharField(
-        max_length=20, choices=BERRY_CHOICES, verbose_name="Ягоды", default="none"
-    )
-    decor = models.CharField(
-        max_length=20, choices=DECOR_CHOICES, default="none", verbose_name="Декор"
-    )
+    topping = models.CharField(max_length=20, choices=TOPPING_CHOICES, verbose_name="Топпинг")
+    berries = models.CharField(max_length=20, choices=BERRY_CHOICES, verbose_name="Ягоды", default='none')
+    decor = models.CharField(max_length=20, choices=DECOR_CHOICES, default='none', verbose_name="Декор")
 
-    cake_text = models.CharField(
-        max_length=255, blank=True, null=True, verbose_name="Надпись"
-    )
+    cake_text = models.CharField(max_length=255, blank=True, null=True, verbose_name="Надпись")
 
-    price = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0, verbose_name="Цена"
-    )
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Цена")
 
     @classmethod
     def get_shape_dict(cls):
@@ -131,7 +115,6 @@ class CustomCake(models.Model):
     def __str__(self):
         return f"Кастомный торт ({self.levels} уровня, {self.shape}) - {self.price} руб."
 
-
 class CakeOrder(models.Model):
     cake = models.ForeignKey(StandardCake, on_delete=models.SET_NULL, null=True, blank=True)
     cake_text = models.CharField(max_length=255, blank=True, null=True, )  # Добавляем это поле
@@ -139,7 +122,6 @@ class CakeOrder(models.Model):
     comment = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
-    telegram_id = models.CharField(max_length=255, null=True, blank=True)
     def calculate_price(self):
         if self.cake:
             self.price = self.cake.price

@@ -36,4 +36,3 @@ class ShortLinkAdmin(admin.ModelAdmin):
 
 admin.site.register(ShortLink, ShortLinkAdmin)
 admin.site.register(StandardCake, StandardCakeAdmin)
-
