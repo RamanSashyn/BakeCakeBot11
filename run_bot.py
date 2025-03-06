@@ -9,7 +9,7 @@ django.setup()
 
 import asyncio
 from aiogram import Bot, Dispatcher
-from staticfiles.handlers import router  # Если это необходимо
+from bot_data.handlers import router  # Если это необходимо
 
 # Импортируйте ваш бот и другие компоненты только после настройки Django
 TOKEN = "7496626388:AAH3n8g35MqRRLw_E9kyGvvr87fLrU63HBQ"
