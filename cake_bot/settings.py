@@ -28,6 +28,11 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = ['https://bakecakebot11-production.up.railway.app']
+
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
+
 
 # Application definition
 
