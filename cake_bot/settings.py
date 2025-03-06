@@ -119,10 +119,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),  # Убедись, что путь правильный
+]
 
-# Пути для дополнительных статических файлов
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+BOT_FILES_DIR = os.path.join(BASE_DIR, 'bot_data')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
