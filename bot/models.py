@@ -135,6 +135,9 @@ class CakeOrder(models.Model):
     def calculate_price(self):
         if self.cake:
             self.price = self.cake.price
+
+            if self.cake_text and self.cake_text.lower() != "нет":
+                self.price += 500
         return self.price
 
     def save(self, *args, **kwargs):
