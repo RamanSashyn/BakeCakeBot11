@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Создаем папку для статических файлов, если её нет
-RUN mkdir -p /app/static
+RUN mkdir -p /app/staticfiles
 
 # Собираем статические файлы (если нужно)
 RUN python manage.py collectstatic --noinput
