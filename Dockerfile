@@ -11,5 +11,8 @@ COPY . .
 # Собираем статические файлы (если нужно)
 RUN python manage.py collectstatic --noinput
 
+# Создаем папку static, если её нет
+RUN mkdir -p /app/static
+
 # Команда запуска
 CMD ["sh", "-c", "sleep 10 && python manage.py migrate && python run_bot.py && python manage.py runserver 0.0.0.0:8080"]
