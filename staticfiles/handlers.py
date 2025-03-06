@@ -13,8 +13,6 @@ from bot.models import (
     CustomCakeOrder,
 )
 from asgiref.sync import sync_to_async
-import logging
-from asgiref.sync import sync_to_async
 from aiogram import Bot, types
 from config import ADMIN_GROUP_ID
 from .keyboards import (
@@ -237,11 +235,11 @@ def save_custom_cake(custom_cake):
 async def process_comment(message: types.Message, state: FSMContext, bot: Bot):
     """Сохраняем комментарий, завершаем процесс заказа и уведомляем администраторов."""
     user_data = await state.get_data()
-    levels_str = user_data.get("levels", "1")  # Берём значение из состояния
+    levels_str = user_data.get("level")  # Берём значение из состояния
     try:
-        levels = int(levels_str)  # Пробуем привести к int
+        levels = int(levels_str) if levels_str else 1  # Пробуем привести к int
     except ValueError:
-        levels = 1  
+        levels = 1
     address = user_data.get("address")
     comment = message.text
     selected_cake_id = user_data.get("selected_cake_id")
