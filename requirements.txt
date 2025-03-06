@@ -3,3 +3,4 @@ Django==5.1.4
 environs==14.1.0
 requests==2.32.3
 pytz==2025.1
+whitenoise==6.9.0
